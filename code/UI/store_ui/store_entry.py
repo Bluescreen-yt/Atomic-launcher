@@ -11,6 +11,7 @@ class GameStatus(Enum):
     UPDATE_AVAILABLE = auto()
     INSTALLED = auto()
     DOWNLOADING = auto()
+    QUEUED = auto()
 
 
 class StoreEntry(pygame.sprite.Sprite):
@@ -109,7 +110,8 @@ class StoreEntry(pygame.sprite.Sprite):
             GameStatus.NOT_INSTALLED: ("GET", (60, 120, 220)),       # Blueish
             GameStatus.INSTALLED: ("INSTALLED", (60, 180, 100)),     # Green
             GameStatus.UPDATE_AVAILABLE: ("UPDATE", (220, 140, 40)), # Orange
-            GameStatus.DOWNLOADING: ("DOWNLOADING", (200, 200, 60))  # Yellow
+            GameStatus.DOWNLOADING: ("DOWNLOADING", (200, 200, 60)),  # Yellow
+            GameStatus.QUEUED: ("QUEUED", (150, 150, 150))          # Gray
         }
 
         label, bg_color = mapping[self.status]

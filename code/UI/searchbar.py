@@ -2,7 +2,7 @@
 import pygame
 
 #IMPORTING FILES
-from settings import WINDOW_WIDTH, THEME_LIBRARY, WINDOW_HEIGHT
+from settings import WINDOW_WIDTH, THEME_LIBRARY, WINDOW_HEIGHT, get_contrast_text_color
 
 #IMPORTING UI ELEMENTS
 from UI.keyboard import Keyboard
@@ -66,7 +66,7 @@ class SearchBar:
 
         # Draw Text/Cursor
         display = self.text + ("|" if self.active and pygame.time.get_ticks() % 1000 < 500 else "")
-        color = (255, 255, 255) if (self.active or focused) else (140, 140, 140)
+        color = get_contrast_text_color(theme['colour_2']) if (self.active or focused) else (80, 80, 80)
         surf = self.font.render(display if display else "Search...", True, color)
         window.blit(surf, (bar_x + 12, bar_y + self.h // 2 - surf.get_height() // 2))
 

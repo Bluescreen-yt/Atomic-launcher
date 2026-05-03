@@ -2,12 +2,18 @@
 import pygame
 from os.path import join, exists
 import shutil
+import os
+import stat
 
 #IMPORTING FILES
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, GAMES_DIR, GAME_LIBRARY_DATA_PATH
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, GAMES_DIR, GAME_LIBRARY_DATA_PATH, get_contrast_text_color
 
 #IMPORTING TOOLS
 from Tools.data_loading_tools import save_data
+
+def remove_readonly(func, path, _):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 #BOTTOM BAR WITH EXTRA OPTIONS IN THE LIBRARY
 class BottomBar:
@@ -63,7 +69,8 @@ class BottomBar:
 
         for i, option in enumerate(s.options):
             selected = i == s.index
-            color = theme['colour_3'] if selected else theme['colour_4']
+            bg = theme['colour_2'] if selected else theme['colour_4']
+            color = get_contrast_text_color(bg)
             label = f">> {s.options[i]['label']}" if selected else s.options[i]['label']
 
             text = s.font.render(label, True, color)
@@ -124,7 +131,7 @@ class BottomBar:
 
         try:
             if exists(game_path):
-                shutil.rmtree(game_path)
+                shutil.rmtree(game_path, onerror=remove_readonly)
                 print(f"Uninstalled: {game}")
                 s.library.get_game_library()
                 s.visible = False

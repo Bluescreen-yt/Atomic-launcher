@@ -2,7 +2,7 @@
 import pygame
 
 #IMPORTING FILES
-from settings import BASE_DIR
+from settings import BASE_DIR, get_contrast_text_color
 from UI.options_ui.FPS_preview_ball import Ball
 from Tools.data_loading_tools import save_data
 from Tools.asset_importing_tool import import_image
@@ -130,11 +130,7 @@ class VideoOptionsTab(GenericOptionsTab):
                 else s.current_theme['colour_4']
             )
 
-            text_colour = (
-                s.current_theme['colour_3']
-                if is_selected and has_focus
-                else s.current_theme['colour_2']
-            )
+            text_colour = get_contrast_text_color(bg_colour)
 
             button_surf = pygame.Surface(s.resolution_button_size)
             button_surf.fill(bg_colour)
@@ -182,11 +178,7 @@ class VideoOptionsTab(GenericOptionsTab):
                 else s.current_theme['colour_4']
             )
 
-            text_colour = (
-                s.current_theme['colour_3']
-                if is_selected and has_focus
-                else s.current_theme['colour_2']
-            )
+            text_colour = get_contrast_text_color(bg_colour)
 
             button_surf = pygame.Surface(s.FPS_button_size)
             button_surf.fill(bg_colour)
@@ -369,13 +361,12 @@ class ControlsOptionsTab(GenericOptionsTab):
                 # Kolory
                 if is_waiting:
                     bg_colour = (200, 50, 50)
-                    text_colour = s.current_theme['colour_3']
                 elif is_selected and has_focus:
                     bg_colour = s.current_theme['colour_2']
-                    text_colour = s.current_theme['colour_3']
                 else:
                     bg_colour = s.current_theme['colour_4']
-                    text_colour = s.current_theme['colour_2']
+
+                text_colour = get_contrast_text_color(bg_colour)
 
                 # Pozycjonowanie (2 kolumny)
                 x = s.initial_pos[0] + col_idx * s.column_spacing
@@ -475,7 +466,7 @@ class PerformanceOptionsTab(GenericOptionsTab):
             is_active = (fps == current_saved_fps)
 
             bg_col = s.current_theme['colour_2'] if is_selected else s.current_theme['colour_4']
-            text_col = s.current_theme['colour_3'] if is_selected else s.current_theme['colour_2']
+            text_col = get_contrast_text_color(bg_col)
 
             rect = pygame.Rect(
                 s.initial_pos[0], 
@@ -510,7 +501,7 @@ class PerformanceOptionsTab(GenericOptionsTab):
         is_on = s.launcher.performance_settings_data['turn_off_launcher_when_game_active']
 
         bg_col = s.current_theme['colour_2'] if is_selected else s.current_theme['colour_4']
-        text_col = s.current_theme['colour_3'] if is_selected else s.current_theme['colour_2']
+        text_col = get_contrast_text_color(bg_col)
 
         rect = pygame.Rect(x_pos, s.initial_pos[1], s.shutdown_button_size[0], s.shutdown_button_size[1])
         pygame.draw.rect(window, bg_col, rect, border_radius=10)
@@ -595,7 +586,7 @@ class ThemesOptionsTab(GenericOptionsTab):
             
             # Button Colors
             bg_col = current_visuals['colour_2'] if is_hovered else current_visuals['colour_4']
-            text_col = current_visuals['colour_3'] if is_hovered else current_visuals['colour_2']
+            text_col = get_contrast_text_color(bg_col)
             
             x = s.initial_pos[0]
             y = s.initial_pos[1] + i * (s.button_size[1] + s.spacing)
