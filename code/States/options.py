@@ -20,7 +20,7 @@ class Options(BaseState):
         # ---------------- TABS ----------------
         s.tabs = [
             ('Video', VideoOptionsTab(launcher)),
-            ('Controlls', ControlsOptionsTab(launcher)),
+            ('Controls', ControlsOptionsTab(launcher)),
             ('Performance', PerformanceOptionsTab(launcher)),
             ('Themes', ThemesOptionsTab(launcher)),
         ]
@@ -28,11 +28,18 @@ class Options(BaseState):
         s.topbar_index = 0
 
         # ---------------- TOPBAR ----------------
-        s.topbar_height = WINDOW_HEIGHT * 0.05
-        s.topbar_font = pygame.font.SysFont(None, 30)
+        s.topbar_font = pygame.font.SysFont(None, 34)
+        s.topbar_padding = (24, 12)  # horizontal, vertical padding
+        s.topbar_spacing = 12
+        s.topbar_y = int(WINDOW_HEIGHT * 0.06)
+        s.topbar_button_height = s.topbar_font.get_height() + s.topbar_padding[1] * 2
 
-        s.topbar_pos = (WINDOW_WIDTH * 0.1 + 10, 10)
-        s.topbar_button_size = (200, 80)
+        # Icons for tabs (generated from label initials if no assets available)
+        s.topbar_icon_size = (28, 28)
+        s.topbar_icon_spacing = 10
+        s.topbar_icon_font = pygame.font.SysFont(None, 20)
+        s.tab_icons = []
+        s.generate_tab_icons()
 
     # =====================================================
 
@@ -45,18 +52,10 @@ class Options(BaseState):
     def draw(s, window):
         window.fill((0, 0, 0))
 
-        if s.launcher.state_manager.ui_focus == 'topbar':
-            pygame.draw.rect(
-                window,
-                (0, 200, 255),
-                pygame.Rect(0, 0, WINDOW_WIDTH, 5)
-            )
-        else:
-            pygame.draw.rect(
-                window,
-                (0, 200, 255),
-                pygame.Rect(0, s.topbar_pos[1] + s.topbar_button_size[1] + 10, WINDOW_WIDTH-800, 5)
-            )
+        # Draw a subtle separator under the top tabs
+        theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
+        separator_y = s.topbar_y + s.topbar_button_height + 12
+        pygame.draw.rect(window, theme['colour_2'], pygame.Rect(0, separator_y, WINDOW_WIDTH, 4))
 
         s.draw_topbar(window)
 
@@ -98,25 +97,74 @@ class Options(BaseState):
 
     def draw_topbar(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-        start_x, y = s.topbar_pos
+
+        # Calculate widths for each tab based on icon + label size + padding
+        label_sizes = [s.topbar_font.size(label) for (label, _) in s.tabs]
+        icon_w = s.topbar_icon_size[0]
+        tab_widths = [icon_w + s.topbar_icon_spacing + w + s.topbar_padding[0] * 2 for (w, h) in label_sizes]
+        total_width = sum(tab_widths) + s.topbar_spacing * (len(tab_widths) - 1)
+        start_x = int((WINDOW_WIDTH - total_width) // 2)
+        y = s.topbar_y
 
         for i, (label, _) in enumerate(s.tabs):
-            x = start_x + i * (s.topbar_button_size[0] + 10)
-            tab_rect = pygame.Rect((x, y), s.topbar_button_size)
+            w = tab_widths[i]
+            h = s.topbar_button_height
+            x = start_x + sum(tab_widths[:i]) + s.topbar_spacing * i if i > 0 else start_x
+
+            tab_rect = pygame.Rect(x, y, w, h)
 
             is_selected = (i == s.topbar_index)
 
             bg_color = theme['colour_2'] if is_selected else theme['colour_4']
             text_color = theme['colour_1'] if is_selected else theme['colour_3']
 
-            pygame.draw.rect(window, bg_color, tab_rect)
+            # Draw rounded tab background
+            pygame.draw.rect(window, bg_color, tab_rect, border_radius=12)
 
+            # Draw outline / accent for selected tab
+            if is_selected:
+                pygame.draw.rect(window, theme['colour_1'], tab_rect, 3, border_radius=12)
+            else:
+                pygame.draw.rect(window, (0, 0, 0), tab_rect, 1, border_radius=12)
+
+            # Draw icon (if generated)
+            if i < len(s.tab_icons):
+                icon = s.tab_icons[i]
+                icon_y = tab_rect.centery - icon.get_height() // 2
+                icon_x = tab_rect.x + s.topbar_padding[0]
+                window.blit(icon, (icon_x, icon_y))
+                text_x_offset = s.topbar_padding[0] + icon.get_width() + s.topbar_icon_spacing
+            else:
+                text_x_offset = s.topbar_padding[0]
+
+            # Render text
             text_surf = s.topbar_font.render(label, True, text_color)
-            text_rect = text_surf.get_rect(center=tab_rect.center)
+            text_rect = text_surf.get_rect(center=(tab_rect.x + text_x_offset + (tab_rect.width - text_x_offset) // 2, tab_rect.centery))
             window.blit(text_surf, text_rect)
 
-            if is_selected:
-                pygame.draw.rect(window, (0, 250, 0), tab_rect, 3)
+        # Draw focus underline when topbar has focus
+        if s.launcher.state_manager.ui_focus == 'topbar':
+            underline_rect = pygame.Rect(start_x, y + s.topbar_button_height + 8, total_width, 4)
+            pygame.draw.rect(window, theme['colour_1'], underline_rect, border_radius=2)
+
+    # =====================================================
+
+    def generate_tab_icons(s):
+        """Generate small circular icons for each tab using the current theme and the label initial."""
+        s.tab_icons = []
+        theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
+        for label, _ in s.tabs:
+            icon_surf = pygame.Surface(s.topbar_icon_size, pygame.SRCALPHA)
+            pygame.draw.circle(
+                icon_surf,
+                theme['colour_3'],
+                (s.topbar_icon_size[0]//2, s.topbar_icon_size[1]//2),
+                s.topbar_icon_size[0]//2
+            )
+            initial = label[0].upper()
+            txt = s.topbar_icon_font.render(initial, True, theme['colour_4'])
+            icon_surf.blit(txt, txt.get_rect(center=(s.topbar_icon_size[0]//2, s.topbar_icon_size[1]//2)))
+            s.tab_icons.append(icon_surf)
 
     # =====================================================
 
@@ -132,3 +180,5 @@ class Options(BaseState):
         ('Performance', PerformanceOptionsTab(s.launcher)),
         ('Themes', ThemesOptionsTab(s.launcher)),
         ]
+        # Regenerate icons so they respect the newly selected theme
+        s.generate_tab_icons()
