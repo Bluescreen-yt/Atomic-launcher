@@ -1,6 +1,9 @@
 #IMPORTING LIBRARIES
 import pygame
 
+# IMPORTING FILES
+from settings import get_contrast_text_color
+
 
 #A GENERIC BUTTON CLASS
 class GenericButton():
@@ -214,7 +217,8 @@ class GenericToggleButton:
 
         s.rect = s.image.get_rect(center=s.pos)
 
-        text_surf = s.font.render(s.text, True, (0,0,0))
+        text_colour = get_contrast_text_color(current_colour)
+        text_surf = s.font.render(s.text, True, text_colour)
         text_rect = text_surf.get_rect(center=(s.size[0]//2, s.size[1]//2))
 
         s.image.blit(text_surf, text_rect)

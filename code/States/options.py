@@ -8,7 +8,7 @@ from UI.options_ui.option_tabs import (
     ControlsOptionsTab,
     PerformanceOptionsTab
 )
-from settings import THEME_LIBRARY, WINDOW_WIDTH, WINDOW_HEIGHT
+from settings import THEME_LIBRARY, WINDOW_WIDTH, WINDOW_HEIGHT, get_contrast_text_color
 from States.generic_state import BaseState
 
 
@@ -119,17 +119,17 @@ class Options(BaseState):
             # Use stronger color when tab is selected AND topbar has focus
             if is_selected and has_focus:
                 bg_color = theme['colour_2']
-                text_color = theme['colour_1']
-                outline_color = theme['colour_1']
+                text_color = get_contrast_text_color(bg_color)
+                outline_color = text_color
                 outline_width = 3
             elif is_selected:
                 bg_color = theme['colour_4']
-                text_color = theme['colour_3']
+                text_color = get_contrast_text_color(bg_color)
                 outline_color = theme['colour_3']
                 outline_width = 2
             else:
                 bg_color = theme['colour_4']
-                text_color = theme['colour_3']
+                text_color = get_contrast_text_color(bg_color)
                 outline_color = (0, 0, 0)
                 outline_width = 1
 

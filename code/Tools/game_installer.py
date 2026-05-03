@@ -2,8 +2,10 @@ from pathlib import Path
 import subprocess
 import shutil
 import json
+import os
+import stat
 from typing import Optional
-
+import threading
 
 class GameInstaller:
     """
@@ -20,6 +22,12 @@ class GameInstaller:
         self.is_downloading = False
         self.current_game_id = None
         self.download_progress = 0
+        self.download_queue = []
+        self.current_process = None
+
+    def remove_readonly(self, func, path, excinfo):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
 
     # ==================================================
     # BASIC STATE
@@ -60,7 +68,6 @@ class GameInstaller:
     # ==================================================
     def install(self, game_id, repo_url, manifest_version, branch="main") -> bool:
         target = self.games_dir / game_id
-        self.is_downloading = True
         self.current_game_id = game_id
         self.download_progress = 0
 
@@ -74,6 +81,7 @@ class GameInstaller:
                 bufsize=1,
                 universal_newlines=True
             )
+            self.current_process = process
 
             # Czytamy strumień danych linijka po linijce
             for line in process.stdout:
@@ -94,13 +102,13 @@ class GameInstaller:
                 self.write_local_version(game_id, manifest_version)
                 return True
             else:
-                if target.exists(): shutil.rmtree(target)
+                if target.exists(): shutil.rmtree(target, onerror=self.remove_readonly)
                 return False
 
         finally:
-            self.is_downloading = False
             self.current_game_id = None
             self.download_progress = 0
+            self.current_process = None
 
     # ==================================================
     # UPDATE
@@ -118,7 +126,6 @@ class GameInstaller:
             return False
         
         # Ustawiamy stan pobierania przed rozpoczęciem procesów
-        self.is_downloading = True
         self.current_game_id = game_id
 
         try:
@@ -168,8 +175,35 @@ class GameInstaller:
             # TO JEST KLUCZOWE: 
             # Niezależnie od tego czy się udało, czy wywaliło błąd, 
             # musimy "odblokować" launcher dla użytkownika.
+            self.current_game_id = None
+            self.process_queue()
+
+    def process_queue(self):
+        if self.download_queue and not self.is_downloading:
+            game_id, repo, version = self.download_queue.pop(0)
+            self._start_download(game_id, repo, version)
+
+    def _start_download(self, game_id, repo, version):
+        self.is_downloading = True
+        self.current_game_id = game_id
+        self.download_progress = 0
+        threading.Thread(target=self._download_game, args=(game_id, repo, version), daemon=True).start()
+
+    def _download_game(self, game_id, repo, version):
+        try:
+            self.install(game_id, repo, version)
+        finally:
             self.is_downloading = False
             self.current_game_id = None
+            self.process_queue()
+
+    def cancel_download(self):
+        self.download_queue = []
+        self.is_downloading = False
+        self.current_game_id = None
+        if self.current_process:
+            self.current_process.terminate()
+            self.current_process = None
 
     # ==================================================
     # REMOVE
@@ -179,7 +213,7 @@ class GameInstaller:
         if not self.is_installed(game_id):
             return False
         try:
-            shutil.rmtree(target)
+            shutil.rmtree(target, onerror=self.remove_readonly)
             print(f"[Installer] {game_id} usunięty.")
             return True
         except Exception as e:

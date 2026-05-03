@@ -3,7 +3,7 @@ import pygame
 from sys import exit
 
 #IMPORTING FILES
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, get_contrast_text_color
 
 class Sidebar:
     def __init__(self, launcher):
@@ -103,7 +103,8 @@ class Sidebar:
 
         for i, name in enumerate(self.options):
             selected = i == self.index
-            color = theme['colour_3'] if selected else (220, 220, 220)
+            bg = theme['colour_2'] if selected else theme['colour_4']
+            color = get_contrast_text_color(bg)
 
             # Obliczamy Y na podstawie stałej wysokości, a nie wysokości okna
             y_center = start_y + i * (item_height + spacing)
@@ -118,6 +119,10 @@ class Sidebar:
 
             # ---- TEXT ----
             if progress > 0.25:
+                if selected:
+                    color = theme['colour_1']
+                else:                    
+                    color = theme['colour_2']
                 text_surf = self.font.render(name.upper(), True, color).convert_alpha()
                 text_surf.set_alpha(int(progress * 255))
 

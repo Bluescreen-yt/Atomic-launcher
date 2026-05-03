@@ -11,6 +11,7 @@ from UI.searchbar import SearchBar
 from UI.game_icon import GameIcon
 from UI.library_ui.bottombar import BottomBar
 from UI.buttons import GenericToggleButton
+from UI.library_ui.navigation_tutorial import NavigationTutorial
 
 # IMPORTING TOOLS
 from Tools.data_loading_tools import load_data
@@ -32,6 +33,7 @@ class Library(BaseState):
         s.show_favorites_only = False
         s.topbar_focus = False 
         s.topbar_index = 0  # 0 = Searchbar, 1 = Favorites Button
+        s.navigation_tutorial = NavigationTutorial(launcher)
 
         # LIBRARY UI ELEMENTS
         # SearchBar handles its own internal Keyboard instance
@@ -80,6 +82,10 @@ class Library(BaseState):
     def handling_events(s, events):
         controlls = s.launcher.controlls_data
         keys = pygame.key.get_just_pressed()
+
+        if s.navigation_tutorial.is_active():
+            s.navigation_tutorial.handle_input(keys)
+            return
 
         # 1. SEARCHBAR INPUT (When virtual keyboard is open)
         if s.searchbar.active:
@@ -134,6 +140,7 @@ class Library(BaseState):
         super().update(delta_time)
         s.current_scroll += (s.selected_index - s.current_scroll) * s.scroll_speed * delta_time
         s.fav_toggle.update(delta_time)
+        s.navigation_tutorial.update(delta_time)
 
     def draw(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
@@ -148,6 +155,8 @@ class Library(BaseState):
 
         # Draw the Favorites Toggle Button
         s.fav_toggle.draw(window)
+
+        s.navigation_tutorial.draw(window)
 
         super().draw(window)
 
@@ -193,6 +202,7 @@ class Library(BaseState):
         if game_data and "name" in game_data:
             return game_data["name"]
         return folder_name.replace("_", " ").title()
+
 
     def get_game_library(s):
         s.manifest = load_data(s.manifest_path, {})

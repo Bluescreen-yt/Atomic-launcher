@@ -14,7 +14,8 @@ GAMES_DIR = join(BASE_DIR, 'games')
 GAME_LIBRARY_DATA_PATH = join(BASE_DIR, 'data', 'game_library_data.json')
 DEFAULT_GAME_LIBRARY_DATA = {
     'favorites' : [],
-    'last_launched' : []
+    'last_launched' : [],
+    'navigation_tutorial_shown' : False
 }
 
 #CONTROLLS SETTIGNS
@@ -59,31 +60,56 @@ DEFAULT_PERFORMANCE_SETTINGS_DATA = {
 #THEMES DATA
 THEMES_DATA_PATH = join(BASE_DIR, 'data', 'themes_data.json')
 DEFAULT_THEME_DATA = {
-    'current_theme' : 'Violet'
+    'current_theme' : 'Aurora'
 }
 THEME_LIBRARY = {
-    'Violet' : {'colour_1' : "#240040",
-                 'colour_2' : "#FF891C",
-                 'colour_3' : "#41E9FF",
-                 'colour_4' : "#550096"},
+    'Aurora' : {'colour_1' : "#0F1B3C",
+                'colour_2' : "#84A5FF",
+                'colour_3' : "#2B3A6A",
+                'colour_4' : "#D7E0FF"},
 
-    'High contrast' : {'colour_1' : "#0C0C0C",
-                        'colour_2' : "#F9FF40",
-                        'colour_3' : "#4DACFF",
-                        'colour_4' : "#353535"},
-    
-    'Crimson' : {'colour_1' : "#2D0000",
-                 'colour_2' : "#DC143C",
-                 'colour_3' : "#FFD700",
-                 'colour_4' : "#600000"},
+    'Solar Flare' : {'colour_1' : "#3D180F",
+                     'colour_2' : "#FF9C42",
+                     'colour_3' : "#AA542C",
+                     'colour_4' : "#F6E0C7"},
 
-    'Emerald' : {'colour_1' : "#002B1B",
-                 'colour_2' : "#50C878",
-                 'colour_3' : "#F0F0F054",
-                 'colour_4' : "#004B32"},
+    'Forest Dusk' : {'colour_1' : "#102C1F",
+                     'colour_2' : "#6BB78E",
+                     'colour_3' : "#3E6752",
+                     'colour_4' : "#DCEFE2"},
 
-    'Midnight' : {'colour_1' : "#0B132B",
-                  'colour_2' : "#5BC0BE",
-                  'colour_3' : "#FFFFFF6B",
-                  'colour_4' : "#1C2541"},
+    'Ocean Depths' : {'colour_1' : "#04304D",
+                      'colour_2' : "#64B2E4",
+                      'colour_3' : "#1C5E80",
+                      'colour_4' : "#D7EDFF"},
+
+    'Neon Grid' : {'colour_1' : "#140B2A",
+                   'colour_2' : "#FF5EBF",
+                   'colour_3' : "#7E62E8",
+                   'colour_4' : "#E9E1FF"},
+
+    'Slate Bloom' : {'colour_1' : "#232F41",
+                     'colour_2' : "#7AA1D2",
+                     'colour_3' : "#4F6D8B",
+                     'colour_4' : "#EFF4FA"},
+
+    'High Contrast' : {'colour_1' : "#000000",
+                       'colour_2' : "#FFFF00",
+                       'colour_3' : "#FFFFFF",
+                       'colour_4' : "#444444"},
 }
+
+
+def hex_to_rgb(hex_color):
+    hex_color = hex_color.lstrip('#')
+    return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+
+def get_contrast_text_color(bg_color):
+    if isinstance(bg_color, str):
+        r, g, b = hex_to_rgb(bg_color)
+    else:
+        r, g, b = bg_color
+
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return (0, 0, 0) if luminance > 150 else (255, 255, 255)

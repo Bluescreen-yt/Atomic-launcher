@@ -4,13 +4,20 @@ import shutil
 import subprocess
 import sys
 import threading
+import urllib.request
+import json
+import stat
 from os import listdir
 from os.path import join, isdir
 
 from States.generic_state import BaseState
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, BASE_DIR, GAMES_DIR
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, BASE_DIR, GAMES_DIR, get_contrast_text_color
 from UI.store_ui.store_entry import GameStatus
 from UI.store_ui.progress_bar import Bar
+
+def remove_readonly(func, path, _):
+    os.chmod(path, stat.S_IWRITE)
+    func(path)
 
 class GamePreview(BaseState):
     def __init__(s, launcher):
@@ -35,6 +42,24 @@ class GamePreview(BaseState):
         s.selection_index = 0
         s.check_status()
         s.load_screenshots()
+        if s.launcher.checking_internet_connection():
+            threading.Thread(target=s.fetch_size, daemon=True).start()
+
+    def fetch_size(s):
+        try:
+            repo_url = s.data['repo']
+            # Extract owner/repo from https://github.com/owner/repo.git
+            parts = repo_url.replace('https://github.com/', '').replace('.git', '').split('/')
+            owner, repo = parts[0], parts[1]
+            api_url = f"https://api.github.com/repos/{owner}/{repo}"
+            with urllib.request.urlopen(api_url) as response:
+                data = json.loads(response.read().decode())
+                size_kb = data.get('size', 0)
+                size_mb = size_kb / 1024
+                s.data['size'] = f"{size_mb:.1f}"
+        except Exception as e:
+            print(f"Failed to fetch size for {s.game_id}: {e}")
+            s.data['size'] = None
 
     def check_status(s):
         """Checks if the game folder exists to determine installation status."""
@@ -166,24 +191,19 @@ class GamePreview(BaseState):
         target_dir = join(GAMES_DIR, s.game_id)
         if isdir(target_dir):
             try:
-                shutil.rmtree(target_dir)
+                shutil.rmtree(target_dir, onerror=remove_readonly)
                 s.check_status()
                 s.selection_index = 0 
             except Exception as e:
                 print(f"Uninstall failed: {e}")
 
     def install_logic(s):
-        if s.launcher.installer.is_downloading: return
-        manifest_version = s.data.get("version")
-        
-        def run_in_background():
-            if s.status == GameStatus.NOT_INSTALLED:
-                s.launcher.installer.install(s.game_id, s.data["repo"], manifest_version)
-            elif s.status == GameStatus.UPDATE_AVAILABLE:
-                s.launcher.installer.update(s.game_id, manifest_version)
-            s.check_status()
-
-        threading.Thread(target=run_in_background, daemon=True).start()
+        # Check if already in queue or downloading
+        if any(q[0] == s.game_id for q in s.launcher.installer.download_queue) or s.launcher.installer.is_downloading and s.launcher.installer.current_game_id == s.game_id:
+            return
+        s.launcher.installer.download_queue.append((s.game_id, s.data["repo"], s.data.get("version")))
+        if not s.launcher.installer.is_downloading:
+            s.launcher.installer.process_queue()
 
     def draw_button(s, window, text, rect, theme, is_selected):
         is_danger = text == "UNINSTALL"
@@ -191,11 +211,11 @@ class GamePreview(BaseState):
         if is_selected:
             # Selected buttons pop with the Primary Accent (colour_2)
             bg_color = (200, 50, 50) if is_danger else theme['colour_2']
-            txt_color = (255, 255, 255)
+            txt_color = get_contrast_text_color(bg_color)
         else:
             # Inactive buttons blend with the Panel Background (colour_4)
             bg_color = theme['colour_4']
-            txt_color = (200, 100, 100) if is_danger else theme['colour_3']
+            txt_color = get_contrast_text_color(bg_color)
         
         pygame.draw.rect(window, bg_color, rect, border_radius=10)
         # Border uses Secondary Accent (colour_3) for subtle definition
@@ -210,7 +230,7 @@ class GamePreview(BaseState):
         window.fill(theme['colour_1']) # Primary Background
         
         x_start = s.launcher.sidebar.base_w + 40
-        is_busy = s.launcher.installer.is_downloading
+        is_busy = s.launcher.installer.is_downloading and s.launcher.installer.current_game_id == s.game_id
         
         # Calculate responsive dimensions
         sidebar_w = int(WINDOW_WIDTH * 0.1)
@@ -238,7 +258,7 @@ class GamePreview(BaseState):
         
         # Meta Info uses Secondary Accent (colour_3)
         meta_font = pygame.font.SysFont(None, 32)
-        meta_text = f"{s.data.get('author')}  |  {s.data.get('game_type')}  |  v{s.data.get('version')}"
+        meta_text = f"AUTHOR: {s.data.get('author')}"
         meta_surf = meta_font.render(meta_text, True, theme['colour_3'])
         window.blit(meta_surf, (x_start, 90))
 
@@ -262,6 +282,18 @@ class GamePreview(BaseState):
         for i, action in enumerate(s.actions):
             rect = pygame.Rect(menu_x, panel_y + i * (btn_h + 12), btn_w, btn_h)
             s.draw_button(window, action, rect, theme, s.selection_index == i)
+
+        # 6. DATA WINDOW
+        data_y = panel_y + len(s.actions) * (btn_h + 12) + 50
+        data_font = pygame.font.SysFont(None, 50)
+        lines = [
+            f"Game Type: {s.data.get('game_type', 'Unknown')}",
+            f"Version: v{s.data.get('version', '1.0.0')}",
+            f"Size: {s.data.get('size', 'Unknown')} MB" if s.data.get('size') else "Size: Unknown"
+        ]
+        for i, line in enumerate(lines):
+            surf = data_font.render(line, True, theme['colour_3'])
+            window.blit(surf, (menu_x, data_y + i * 45))
 
         # 4. DESCRIPTION
         desc_font = pygame.font.SysFont(None, 44)
