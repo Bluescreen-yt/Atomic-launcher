@@ -282,18 +282,18 @@ class VideoOptionsTab(GenericOptionsTab):
         surf = s.font.render(text, True, s.current_theme['colour_2'])
         window.blit(surf, (WINDOW_WIDTH * 0.15, WINDOW_HEIGHT - 80))
 
-
 class ControlsOptionsTab(GenericOptionsTab):
     def __init__(s, launcher):
         super().__init__(launcher)
         
         s.current_theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-        s.initial_pos = (WINDOW_WIDTH * 0.15, 200)
+        s.initial_pos = (WINDOW_WIDTH * 0.30, 400)
         s.button_size = (280, 80)
         s.spacing = 15
-        s.column_spacing = 400
+        s.column_spacing = 600
         
         s.font = pygame.font.SysFont(None, 60, False)
+        s.title_font = pygame.font.SysFont(None, 50, True)
         s.value_font = pygame.font.SysFont(None, 45, False)
 
         # Definiujemy grupy klawiszy dla dwóch kolumn
@@ -302,6 +302,7 @@ class ControlsOptionsTab(GenericOptionsTab):
             'right': ['options', 'action_a', 'action_b']
         }
         s.column_names = ['left', 'right']
+        s.column_titles = ['Movement Buttons', 'Action Buttons']
         
         s.active_col_idx = 0  # 0: lewa, 1: prawa
         s.selected_index = 0  # Indeks wewnątrz danej kolumny
@@ -346,6 +347,16 @@ class ControlsOptionsTab(GenericOptionsTab):
 
     def draw(s, window):
         has_focus = (s.launcher.state_manager.ui_focus == 'content')
+        
+        # Draw column titles
+        for col_idx, col_name in enumerate(s.column_names):
+            title = s.column_titles[col_idx]
+            x = s.initial_pos[0] + col_idx * s.column_spacing + s.button_size[0] // 2
+            y = s.initial_pos[1] - 60
+            
+            title_surf = s.title_font.render(title, True, s.current_theme['colour_2'])
+            title_rect = title_surf.get_rect(center=(x, y))
+            window.blit(title_surf, title_rect)
         
         # Rysowanie każdej kolumny
         for col_idx, col_name in enumerate(s.column_names):

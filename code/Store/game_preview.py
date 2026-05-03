@@ -51,8 +51,17 @@ class GamePreview(BaseState):
         s.fullscreen_screenshots.clear()
         path = join(BASE_DIR, 'assets', 'store_assets', s.game_id, 'screenshots')
         
-        prev_w, prev_h = 760, 428 
-        fs_w, fs_h = WINDOW_WIDTH - 100, WINDOW_HEIGHT - 150
+        # Calculate responsive dimensions
+        # Sidebar is 10% of window width
+        sidebar_w = int(WINDOW_WIDTH * 0.1)
+        available_w = WINDOW_WIDTH - sidebar_w - 80  # 40px margins on each side
+        
+        # Screenshot panel takes 70% of available width, maintains 16:9 aspect ratio
+        prev_w = int(available_w * 0.7)
+        prev_h = int(prev_w * 9 / 16)
+        
+        fs_w = WINDOW_WIDTH - 100
+        fs_h = WINDOW_HEIGHT - 150
 
         if isdir(path):
             files = [f for f in sorted(listdir(path)) if f.endswith(('.png', '.jpg', '.jpeg'))]
@@ -203,6 +212,12 @@ class GamePreview(BaseState):
         x_start = s.launcher.sidebar.base_w + 40
         is_busy = s.launcher.installer.is_downloading
         
+        # Calculate responsive dimensions
+        sidebar_w = int(WINDOW_WIDTH * 0.1)
+        available_w = WINDOW_WIDTH - sidebar_w - 80  # 40px margins on each side
+        screenshot_w = int(available_w * 0.7)
+        screenshot_h = int(screenshot_w * 9 / 16)
+        
         # Dynamic Menu Logic
         if s.status == GameStatus.INSTALLED:
             s.actions = ["LAUNCH GAME", "VIEW GALLERY", "UNINSTALL", "BACK TO STORE"]
@@ -217,12 +232,12 @@ class GamePreview(BaseState):
 
         # 1. HEADER
         # Title uses Primary Accent (colour_2) for hierarchy
-        title_font = pygame.font.SysFont(None, 64, bold=True)
+        title_font = pygame.font.SysFont(None, 70, bold=True)
         title_surf = title_font.render(s.data.get('name', 'Game'), True, theme['colour_2'])
         window.blit(title_surf, (x_start, 30))
         
         # Meta Info uses Secondary Accent (colour_3)
-        meta_font = pygame.font.SysFont(None, 24)
+        meta_font = pygame.font.SysFont(None, 32)
         meta_text = f"{s.data.get('author')}  |  {s.data.get('game_type')}  |  v{s.data.get('version')}"
         meta_surf = meta_font.render(meta_text, True, theme['colour_3'])
         window.blit(meta_surf, (x_start, 90))
@@ -230,33 +245,34 @@ class GamePreview(BaseState):
         # 2. SCREENSHOT PANEL
         panel_y = 140
         # Screenshot area uses the Secondary Background (colour_4)
-        pygame.draw.rect(window, theme['colour_4'], (x_start, panel_y, 760, 428), border_radius=14)
+        pygame.draw.rect(window, theme['colour_4'], (x_start, panel_y, screenshot_w, screenshot_h), border_radius=14)
         window.blit(s.screenshots[s.current_img_index], (x_start, panel_y))
         
         # Navigation Dots
-        dot_x = x_start + 380 - (len(s.screenshots) * 15) // 2
+        dot_x = x_start + screenshot_w // 2 - (len(s.screenshots) * 15) // 2
         for i in range(len(s.screenshots)):
             # Active indicator uses Accent 2, Inactive uses Accent 3
             color = theme['colour_2'] if i == s.current_img_index else theme['colour_3']
-            pygame.draw.circle(window, color, (dot_x + i * 20, panel_y + 445), 4)
+            pygame.draw.circle(window, color, (dot_x + i * 20, panel_y + screenshot_h + 17), 4)
 
         # 3. ACTION MENU
-        menu_x = x_start + 790
-        btn_w, btn_h = 240, 50
+        menu_x = x_start + screenshot_w + 40
+        btn_w = int(available_w * 0.25)
+        btn_h = 50
         for i, action in enumerate(s.actions):
             rect = pygame.Rect(menu_x, panel_y + i * (btn_h + 12), btn_w, btn_h)
             s.draw_button(window, action, rect, theme, s.selection_index == i)
 
         # 4. DESCRIPTION
-        desc_font = pygame.font.SysFont(None, 24)
-        desc_rect = pygame.Rect(x_start, 600, 760, 100)
+        desc_font = pygame.font.SysFont(None, 44)
+        desc_rect = pygame.Rect(x_start, panel_y + screenshot_h + 60, screenshot_w, 100)
         # Description text uses high-contrast colour_4 or standard white
         s.draw_wrapped_text(window, s.data.get('description', ''), desc_font, (240, 240, 240), desc_rect)
 
         # 5. PROGRESS BAR
         if is_busy:
             prog = s.launcher.installer.download_progress
-            s.progress_bar.rect = pygame.Rect(menu_x, 600, btn_w, 20)
+            s.progress_bar.rect = pygame.Rect(menu_x, panel_y + screenshot_h + 60, btn_w, 20)
             s.progress_bar.set_progress(prog)
             s.progress_bar.draw(window)
 

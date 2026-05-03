@@ -4,7 +4,10 @@ from os.path import join, exists
 import shutil
 
 #IMPORTING FILES
-from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, GAMES_DIR
+from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, GAMES_DIR, GAME_LIBRARY_DATA_PATH
+
+#IMPORTING TOOLS
+from Tools.data_loading_tools import save_data
 
 #BOTTOM BAR WITH EXTRA OPTIONS IN THE LIBRARY
 class BottomBar:
@@ -92,7 +95,25 @@ class BottomBar:
         print("Feature coming soon: Favorites")
 
     def add_to_favorites(s):
-        print("Feature coming soon: Favorites")
+        # Get the currently selected game folder name
+        game = s.library.filtered_games[s.library.selected_index]
+        favorites = s.launcher.game_library_data['favorites']
+
+        # Toggle favorite status
+        if game in favorites:
+            favorites.remove(game)
+            s.options[0]['label'] = 'Add to favorites' # Update label for next time
+            print(f"Removed {game} from favorites")
+        else:
+            favorites.append(game)
+            s.options[0]['label'] = 'Remove from favorites'
+            print(f"Added {game} to favorites")
+
+        # Save to disk
+        save_data(s.launcher.game_library_data, GAME_LIBRARY_DATA_PATH)
+
+        # Refresh the library view in case the favorites filter is currently active
+        s.library.apply_search_filter(s.library.searchbar.text)
 
     def delete_save_files(s):
         pass
@@ -118,6 +139,16 @@ class BottomBar:
         s.visible = not s.visible
         s.index = 0
         s.launcher.state_manager.ui_focus = 'bottombar'
+        
+        # --- NEW CODE: Dynamic Label ---
+        if s.library.filtered_games:
+            current_game = s.library.filtered_games[s.library.selected_index]
+            favorites = s.launcher.game_library_data.get('favorites', [])
+            
+            if current_game in favorites:
+                s.options[0]['label'] = 'Remove from favorites'
+            else:
+                s.options[0]['label'] = 'Add to favorites'
 
     def close_bottombar(s):
         s.visible = not s.visible

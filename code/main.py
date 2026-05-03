@@ -87,6 +87,7 @@ class Launcher:
         s.theme_data = load_data(THEMES_DATA_PATH, DEFAULT_THEME_DATA)
         s.performance_settings_data = load_data(PERFORMANCE_SETTINGS_DATA_PATH, DEFAULT_PERFORMANCE_SETTINGS_DATA)
         s.controlls_data = load_data(CONTROLLS_DATA_PATH, DEFAULT_CONTROLLS_DATA)
+        s.game_library_data = load_data(GAME_LIBRARY_DATA_PATH, DEFAULT_GAME_LIBRARY_DATA)
 
     #METHOD FOR CREATING STATE AND OS ELEMENTS (LIBRARY, STORE, SETTINGS, ...)
     def creating_states(s):
@@ -124,6 +125,7 @@ class Launcher:
         save_data(s.theme_data, THEMES_DATA_PATH)
         save_data(s.performance_settings_data, PERFORMANCE_SETTINGS_DATA_PATH)
         save_data(s.controlls_data, CONTROLLS_DATA_PATH)
+        save_data(s.game_library_data, GAME_LIBRARY_DATA_PATH)
 
     #METHOD FOR HANDLING EVENTS
     def handling_events(s):

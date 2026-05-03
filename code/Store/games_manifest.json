@@ -7,7 +7,8 @@
     "version": "1.0.0",
     "description": "A pokemon like game. Made with love...",
     "tags" : ["adventure", "rpg", "pixel-art"],
-    "game_type": "Catching RPG"
+    "game_type": "Catching RPG",
+    "controls": "Keyboard"
   },
   "kitten_klicker": {
     "name": "Kitten klicker",
@@ -17,7 +18,8 @@
     "version": "1.0.0",
     "description": "Klick the kitten to make all the kitty koins!",
     "tags" : ["pixel-art", "cozzy"],
-    "game_type": "Clicker"
+    "game_type": "Clicker",
+    "controls": "Mouse"
   },
   "pack_the_bag": {
     "name": "Pack the bag",
@@ -27,7 +29,8 @@
     "version": "1.0.0",
     "description": "You're leaving for a trip! Pack all your items into a suitcase. This game is quite short and not particularly difficult, and you can probably complete it in 15 minutes or so.",
     "tags" : ["pixel-art", "cozzy"],
-    "game_type": "Point and click"
+    "game_type": "Point and click",
+    "controls": "Mouse"
   },
   "five_nights_at_pythons": {
     "name": "Five Nights at Pythons",
@@ -37,7 +40,8 @@
     "version": "1.0.0",
     "description": "Five Nights at Pythons is a point and click horror game, where you have to survive 5 nights in a pizzeria full of python animatronics. The game is quite short, but it has a lot of jump scares, so be prepared!",
     "tags" : ["horror", "maskot"],
-    "game_type": "Horror"
+    "game_type": "Horror",
+    "controls": "Mouse"
   },
   "flappuccino": {
       "name": "Flappuccino",
@@ -47,7 +51,8 @@
       "version": "1.0.0",
       "description": "You're a coffee-craving bird(?) in Flappuccino, a game made in 48 hours for the Pygame Community New Years Jam!",
       "tags" : ["pixel-art", "arcade"],
-      "game_type": "Arcade"
+      "game_type": "Arcade",
+    "controls": "Keyboard"
     },
   "flyre": {
       "name": "Flyre",
@@ -57,7 +62,8 @@
       "version": "1.0.0",
       "description": "Flyre is a 2d pixel art shoot-em-up, where you improve through a skill tree! It was made in under one week for the Pygame Community Easter jam, but the development will continue, however at a slower pace.",
       "tags" : ["pixel-art", "arcade"],
-      "game_type": "Arcade"
+      "game_type": "Arcade",
+    "controls": "Keyboard"
     },
   "zelda": {
     "name": "Zelda",
@@ -67,7 +73,8 @@
     "version": "1.0.1",
     "description": "You acctually play as Zelda.. Or a version of her.",
     "tags" : ["adventure", "pixel-art", "rpg"],
-    "game_type": "Adventure"
+    "game_type": "Adventure",
+    "controls": "Keyboard"
   },
   "flappy_bird": {
     "name": "Flappy Bird",
@@ -77,7 +84,8 @@
     "version": "1.0.1",
     "description": "Get over the pipes!",
     "tags" : ["arcade"],
-    "game_type": "Arcade"
+    "game_type": "Arcade",
+    "controls": "Keyboard"
   },
   "infinite_runner": {
     "name": "Infinite runner",
@@ -87,7 +95,8 @@
     "version": "1.0.1",
     "description": "Just keep running.",
     "tags" : ["arcade"],
-    "game_type": "Arcade"
+    "game_type": "Arcade",
+    "controls": "Keyboard"
   },
   "space_invaders": {
     "name": "Space Invaders",
@@ -97,7 +106,8 @@
     "version": "1.0.0",
     "description": "A game about space!",
     "tags" : ["arcade"],
-    "game_type": "Arcade"
+    "game_type": "Arcade",
+    "controls": "Keyboard"
   },
   "snake": {
     "name": "Snake",
@@ -107,6 +117,7 @@
     "version": "1.0.0",
     "description": "Don't eat your own tail...",
     "tags" : ["arcade"],
-    "game_type": "Arcade"
+    "game_type": "Arcade",
+    "controls": "Keyboard"
   }
 }

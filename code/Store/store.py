@@ -17,10 +17,13 @@ class Store(BaseState):
         s.online = launcher.checking_internet_connection()
 
         # SEARCHBAR
+        # SearchBar now handles internal keyboard logic and typing state[cite: 16]
         s.search_query = ""
         s.searchbar = SearchBar(
             launcher,
-            on_change=s.on_search_change
+            on_change=s.on_search_change,
+            width=500,
+            height=60
         )
 
         # CATEGORY TABS
@@ -140,82 +143,74 @@ class Store(BaseState):
         state_manager = s.launcher.state_manager
         controlls = getattr(s.launcher, 'controlls_data', {})
         
-        action_confirm = keys[controlls.get('action_a', pygame.K_RETURN)] or keys[pygame.K_r] or keys[pygame.K_RETURN]
-        action_back = keys[controlls.get('action_b', pygame.K_ESCAPE)] or keys[pygame.K_e] or keys[pygame.K_ESCAPE]
+        action_confirm = keys[controlls.get('action_a', pygame.K_RETURN)] or keys[pygame.K_RETURN]
+        action_back = keys[controlls.get('action_b', pygame.K_ESCAPE)] or keys[pygame.K_ESCAPE]
         
         btn_left = controlls.get('left', pygame.K_LEFT)
         btn_right = controlls.get('right', pygame.K_RIGHT)
         btn_up = controlls.get('up', pygame.K_UP)
         btn_down = controlls.get('down', pygame.K_DOWN)
-        btn_options = controlls.get('options', pygame.K_ESCAPE)
 
-        if keys[pygame.K_TAB]:
-            state_manager.ui_focus = "sidebar"
-            return
-
-        if action_back:
-            if state_manager.ui_focus == "content":
-                state_manager.ui_focus = "tabs"
-            elif state_manager.ui_focus == "tabs":
-                state_manager.ui_focus = "sidebar"
-            elif state_manager.ui_focus == "searchbar":
-                state_manager.ui_focus = "tabs"
-                s.searchbar.active = False
-            return
-
-        if not s.online:
-            if action_back or keys[btn_options] or keys[btn_left] or keys[pygame.K_LEFT]:
-                state_manager.ui_focus = "sidebar"
-            return
-
-        if keys[pygame.K_s]:
-            s.sort_mode = "Z-A" if s.sort_mode == "A-Z" else "A-Z"
-            s.apply_filters()
-
+        # 1. SEARCHBAR FOCUS LOGIC[cite: 16, 18]
         if state_manager.ui_focus == "searchbar":
-            exited = s.searchbar.handle_events(events)
-            if exited or keys[btn_down] or keys[pygame.K_DOWN]:
-                state_manager.ui_focus = "tabs"
-                s.searchbar.active = False
+            if s.searchbar.active:
+                # If currently typing, let the searchbar consume events[cite: 16]
+                if s.searchbar.handle_events(events):
+                    state_manager.ui_focus = "tabs"
+                return # Don't process other keys while typing
+            else:
+                # Navigating the searchbar area
+                if action_confirm:
+                    s.searchbar.open_keyboard()
+                elif keys[btn_down]:
+                    state_manager.ui_focus = "tabs"
+                elif keys[btn_left] or action_back:
+                    state_manager.ui_focus = "sidebar"
             return
 
+        # 2. TABS FOCUS LOGIC[cite: 18]
         if state_manager.ui_focus == "tabs":
-            if keys[btn_left] or keys[pygame.K_LEFT]:
+            if keys[btn_left] or action_back:
                 if s.selected_tab_index > 0:
                     s.selected_tab_index -= 1
                     s.apply_filters()
                 else:
                     state_manager.ui_focus = "sidebar"
-            elif keys[btn_right] or keys[pygame.K_RIGHT]:
+            elif keys[btn_right]:
                 s.selected_tab_index = min(len(s.tabs) - 1, s.selected_tab_index + 1)
                 s.apply_filters()
-            elif keys[btn_up] or keys[pygame.K_UP]:
+            elif keys[btn_up]:
                 state_manager.ui_focus = "searchbar"
-                s.searchbar.active = True
-            elif keys[btn_down] or keys[pygame.K_DOWN]:
+            elif keys[btn_down]:
                 if s.entries:
                     state_manager.ui_focus = "content"
             return
 
+        # 3. CONTENT FOCUS LOGIC[cite: 18]
         if state_manager.ui_focus == "content":
-            if keys[btn_up] or keys[pygame.K_UP]:
+            if keys[btn_up]:
                 if s.selected_index < s.columns:
                     state_manager.ui_focus = "tabs"
                 else:
                     s.selected_index -= s.columns
-            elif keys[btn_down] or keys[pygame.K_DOWN]:
+            elif keys[btn_down]:
                 if s.selected_index + s.columns < len(s.entries):
                     s.selected_index += s.columns
-            elif keys[btn_left] or keys[pygame.K_LEFT]:
+            elif keys[btn_left] or action_back:
                 if s.selected_index % s.columns == 0:
                     state_manager.ui_focus = "sidebar"
                 else:
                     s.selected_index -= 1
-            elif keys[btn_right] or keys[pygame.K_RIGHT]:
+            elif keys[btn_right]:
                 if (s.selected_index + 1) % s.columns != 0 and s.selected_index + 1 < len(s.entries):
                     s.selected_index += 1
             elif action_confirm:
                 s.enter_game_preview()
+
+        # Global Hotkeys
+        if keys[pygame.K_s]:
+            s.sort_mode = "Z-A" if s.sort_mode == "A-Z" else "A-Z"
+            s.apply_filters()
 
     def update(s, delta_time):
         super().update(delta_time)
@@ -246,23 +241,15 @@ class Store(BaseState):
 
     def draw(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-        # Base background
         window.fill(theme['colour_1'])
 
         # ---------- HEADER ----------
         header_h = 90
-        # Header uses a slightly lighter background (colour_4) for subtle contrast
         pygame.draw.rect(window, theme['colour_4'], (s.launcher.sidebar.base_w, 0, WINDOW_WIDTH, header_h))
 
         title_font = pygame.font.SysFont(None, 48, bold=True)
-        # Primary Accent (colour_2) for the title text
         title = title_font.render("STORE", True, theme['colour_2'])
         window.blit(title, (s.launcher.sidebar.base_w + 40, 25))
-
-        # ---------- SEARCH BAR ----------
-        s.searchbar.custom_x = WINDOW_WIDTH - 600
-        s.searchbar.custom_y = 25
-        s.searchbar.draw(window, focused=s.launcher.state_manager.ui_focus == "searchbar")
 
         # ---------- TABS ----------
         s.draw_tabs(window, theme)
@@ -270,7 +257,6 @@ class Store(BaseState):
         # ---------- LEGEND & CONTROLS ----------
         info_font = pygame.font.SysFont(None, 24)
         controls_text = f"Hotkeys: [TAB] Sidebar | [E] Back | [R] Details | [S] Sort: {s.sort_mode}"
-        # Secondary Accent (colour_3) for helpful metadata
         sort_text = info_font.render(controls_text, True, theme['colour_3'])
         text_x = WINDOW_WIDTH - sort_text.get_width() - 40
         window.blit(sort_text, (text_x, 135))
@@ -283,9 +269,7 @@ class Store(BaseState):
             WINDOW_HEIGHT - 190
         )
 
-        # Panel body uses colour_4 (the middle-tone dark)
         pygame.draw.rect(window, theme['colour_4'], panel_rect, border_radius=16)
-        # Panel border uses colour_3 (muted secondary accent)
         pygame.draw.rect(window, theme['colour_3'], panel_rect, 2, border_radius=16)
 
         clip_rect = panel_rect.inflate(-6, -6)
@@ -301,7 +285,6 @@ class Store(BaseState):
             if entry.rect.bottom > panel_rect.top and entry.rect.top < panel_rect.bottom:
                 entry.draw(window)
                 if selected:
-                    # Focus highlight uses the bright Primary Accent (colour_2)
                     highlight = entry.rect.inflate(14, 14)
                     pygame.draw.rect(window, theme['colour_2'], highlight, 8, border_radius=14)
 
@@ -324,6 +307,14 @@ class Store(BaseState):
             pygame.draw.rect(window, theme['colour_2'], scroll_rect, border_radius=4)
 
         window.set_clip(None)
+
+        # ---------- SEARCH BAR (DRAWN LAST) ----------
+        # Moving this here ensures the internal keyboard overlay is drawn on top of EVERYTHING[cite: 16]
+        s.searchbar.custom_x = WINDOW_WIDTH - 600
+        s.searchbar.custom_y = 25
+        search_focused = s.launcher.state_manager.ui_focus == "searchbar"
+        s.searchbar.draw(window, focused=search_focused)
+
         super().draw(window)
 
     def draw_tabs(s, window, theme):
@@ -335,20 +326,17 @@ class Store(BaseState):
             active = i == s.selected_tab_index
             focused = s.launcher.state_manager.ui_focus == "tabs"
 
-            # Selection color logic: Accent 2 for active, Accent 3 for inactive
-            text_color = theme['colour_1'] if active else theme['colour_3']
+            text_color = theme['colour_2'] if active else theme['colour_3']
             text = font.render(tab, True, text_color)
 
             rect = pygame.Rect(x, y, text.get_width() + 32, text.get_height() + 16)
 
             if active:
-                # Active tabs get a subtle background outline
-                pygame.draw.rect(window, theme['colour_1'], rect, 3, border_radius=20)
+                pygame.draw.rect(window, theme['colour_2'], rect, 3, border_radius=20)
             else:
                 pygame.draw.rect(window, theme['colour_3'], rect, 2, border_radius=20)
 
             if active and focused:
-                # Extra glow for focus
                 pygame.draw.rect(window, theme['colour_4'], rect.inflate(6, 6), 4, border_radius=22)
 
             window.blit(text, (rect.x + 16, rect.y + 8))

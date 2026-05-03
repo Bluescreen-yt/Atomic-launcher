@@ -2,94 +2,77 @@
 import pygame
 
 #IMPORTING FILES
-from settings import WINDOW_WIDTH, THEME_LIBRARY
+from settings import WINDOW_WIDTH, THEME_LIBRARY, WINDOW_HEIGHT
+
+#IMPORTING UI ELEMENTS
+from UI.keyboard import Keyboard
 
 class SearchBar:
-    def __init__(self, launcher, on_change, x=None, y=None):
+    def __init__(self, launcher, on_change, width=int(WINDOW_WIDTH * 0.3), height=int(WINDOW_HEIGHT * 0.1), x=None, y=None):
         self.launcher = launcher
         self.on_change = on_change
-
         self.active = False
         self.text = ""
-
-        self.h = int(WINDOW_WIDTH * 0.1)
+        
+        # New: Internal Keyboard instance
+        self.keyboard = Keyboard(
+            launcher, 
+            pos=(WINDOW_WIDTH // 2 - 600, WINDOW_HEIGHT *0.4), 
+            size=(1200, 600)
+        )
+        
+        self.w, self.h = width, height
+        self.custom_x, self.custom_y = x, y
         self.font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.035))
 
-        # NEW
-        self.custom_x = x
-        self.custom_y = y
-
-    # =========================
-    # INPUT
-    # =========================
-
     def handle_events(self, events):
-        controlls = self.launcher.controlls_data
+        if self.active:
+            self.keyboard.handling_events(events)
+            
+            # Sync text and trigger the search filter update
+            if self.text != self.keyboard.text:
+                self.text = self.keyboard.text
+                self.on_change(self.text)
 
-        if not self.active:
-            return False
-
-        for event in events:
-            if event.type == pygame.KEYDOWN:
-                
-                if event.key == controlls['right'] or event.key == controlls['options'] or event.key == pygame.K_RETURN:
-                    self.active = False
-                    return True
-                
-                elif event.key == pygame.K_BACKSPACE:
-                    self.text = self.text[:-1]
-                    self.on_change(self.text)
-                
-                else:
-                    if event.unicode and len(event.unicode) == 1:
-                        self.text += event.unicode
-                        self.on_change(self.text)
-
+            if self.keyboard.finished:
+                self.active = False
+                self.keyboard.finished = False
+                return True # Signal that we are done typing
         return False
 
-
-    # =========================
-    # DRAW
-    # =========================
+    def open_keyboard(self):
+        self.active = True
+        self.keyboard.text = self.text # Sync current text to keyboard
 
     def draw(self, window, focused):
         theme = THEME_LIBRARY[self.launcher.theme_data['current_theme']]
+        bar_x = self.custom_x if self.custom_x is not None else WINDOW_WIDTH // 2 - self.w // 2
+        bar_y = self.custom_y if self.custom_y is not None else self.h // 2 - self.h // 2
 
-        bar_w = int(WINDOW_WIDTH * 0.3)
-        bar_h = int(self.h * 0.55)
-        bar_x = self.custom_x if self.custom_x is not None else WINDOW_WIDTH // 2 - bar_w // 2
-        bar_y = self.custom_y if self.custom_y is not None else self.h // 2 - bar_h // 2
-
-        if focused and self.active:
-            border = theme['colour_3']
+        # 2) Visual Indication of focus
+        if self.active:
+            border_color = theme['colour_3'] # Active typing color
+            thickness = 4
         elif focused:
-            border = theme['colour_1']
+            border_color = (255, 255, 255) # Hovered color (White or highlight)
+            thickness = 4
         else:
-            border = theme['colour_4']
+            border_color = theme['colour_4'] # Default color
+            thickness = 2
 
-        pygame.draw.rect(
-            window,
-            theme['colour_2'],
-            (0, 0, WINDOW_WIDTH, bar_h+55),
-        )
+        # Draw Bar Background and Border
+        pygame.draw.rect(window, theme['colour_2'], (bar_x, bar_y, self.w, self.h), border_radius=8)
+        pygame.draw.rect(window, border_color, (bar_x, bar_y, self.w, self.h), thickness, border_radius=8)
 
-        pygame.draw.rect(
-            window,
-            border,
-            (bar_x, bar_y, bar_w, bar_h),
-            3,
-            border_radius=8
-        )
+        # Draw Text/Cursor
+        display = self.text + ("|" if self.active and pygame.time.get_ticks() % 1000 < 500 else "")
+        color = (255, 255, 255) if (self.active or focused) else (140, 140, 140)
+        surf = self.font.render(display if display else "Search...", True, color)
+        window.blit(surf, (bar_x + 12, bar_y + self.h // 2 - surf.get_height() // 2))
 
-        display = self.text
-        if self.active and pygame.time.get_ticks() % 1000 < 500:
-            display += "|"
-
-        text = display if display else "Search game..."
-        color = (255, 255, 255) if self.active else (140, 140, 140)
-
-        surf = self.font.render(text, True, color)
-        window.blit(
-            surf,
-            (bar_x + 12, bar_y + bar_h // 2 - surf.get_height() // 2)
-        )
+        # Draw Keyboard Overlay if active
+        if self.active:
+            overlay = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            window.blit(overlay, (0, 0))
+            self.keyboard.draw(window)

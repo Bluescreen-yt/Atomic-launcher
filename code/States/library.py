@@ -1,19 +1,18 @@
-#IMPORTING LIBRARIES
+# IMPORTING LIBRARIES
 import pygame
 import os
 import subprocess
 import sys
-import json
-import shutil
 
-#IMPORTING FILES
+# IMPORTING FILES
 from States.generic_state import BaseState
 from settings import GAMES_DIR, BASE_DIR, WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
 from UI.searchbar import SearchBar
 from UI.game_icon import GameIcon
 from UI.library_ui.bottombar import BottomBar
+from UI.buttons import GenericToggleButton
 
-#IMPORTING TOOLS
+# IMPORTING TOOLS
 from Tools.data_loading_tools import load_data
 
 
@@ -21,42 +20,73 @@ class Library(BaseState):
     def __init__(s, launcher):
         super().__init__(launcher)
 
-        #LOADING IN GAMES MANIFEST
+        # LOADING IN GAMES MANIFEST
         s.manifest_path = os.path.join(BASE_DIR, 'code', 'Store', 'games_manifest.json')
         s.manifest = load_data(s.manifest_path, {})
 
-        #LOGIC ATTRIBUTES FOR GAMES SHOWN
+        # LOGIC ATTRIBUTES
         s.game_library = []
         s.game_icons = {}
         s.filtered_games = []
         s.selected_index = 0
+        s.show_favorites_only = False
+        s.topbar_focus = False 
+        s.topbar_index = 0  # 0 = Searchbar, 1 = Favorites Button
 
-        #LIBRARY UI ELEMENTS
+        # LIBRARY UI ELEMENTS
+        # SearchBar handles its own internal Keyboard instance
         s.searchbar = SearchBar(
             launcher,
-            on_change = s.apply_search_filter
+            on_change=s.apply_search_filter,
+            width=int(WINDOW_WIDTH * 0.4),
+            height=int(WINDOW_HEIGHT * 0.1),
+            y=int(WINDOW_HEIGHT * 0.03),
+            x=int(WINDOW_WIDTH * 0.5) - int((WINDOW_WIDTH * 0.4) // 2)
         )
+
+        # FAVORITES TOGGLE BUTTON
+        btn_w = int(WINDOW_WIDTH * 0.10)
+        # Positioned to the right of the searchbar
+        btn_x = s.searchbar.custom_x + s.searchbar.w + 200
+        btn_y = s.searchbar.custom_y + s.searchbar.h // 2
+
+        s.fav_toggle = GenericToggleButton(
+            launcher,
+            size=(btn_w, s.searchbar.h/2),
+            pos=(btn_x, btn_y),
+            text="Favorites",
+            text_size=30,
+            active_colour=(0,255,0),  # Fallback colors (not used when theme is enabled)
+            inactive_colour=(255,0,0),
+            action=s.toggle_favorites_filter
+        )
+        s.fav_toggle.set_theme_colours(use_theme=True)
+
         s.bottombar = BottomBar(launcher, s)
+        s.icon_font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.05), bold=False)
 
-        #FONTS
-        s.icon_font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.05), bold = False)
-
-        #LAYOUT ATTRIBUTES
-        s.topbar_h = int(WINDOW_HEIGHT * 0.1)
+        # LAYOUT ATTRIBUTES
         s.icon_w = int(WINDOW_WIDTH * 0.2)
         s.spacing = 60
         s.scroll_speed = 8
         s.current_scroll = 0
-
-        #ICON GROUPS
         s.icon_group = pygame.sprite.Group()
 
-    #METHOD FOR HANDLING INPUT
+    def toggle_favorites_filter(s):
+        """Callback for the fav_toggle button."""
+        s.show_favorites_only = s.fav_toggle.is_on
+        s.apply_search_filter(s.searchbar.text)
+
     def handling_events(s, events):
         controlls = s.launcher.controlls_data
         keys = pygame.key.get_just_pressed()
 
-        #BOTTOMBAR NAVIGATION
+        # 1. SEARCHBAR INPUT (When virtual keyboard is open)
+        if s.searchbar.active:
+            s.searchbar.handle_events(events)
+            return
+
+        # 2. BOTTOMBAR NAVIGATION
         if s.bottombar.visible:
             s.bottombar.handling_events()
             return
@@ -64,53 +94,65 @@ class Library(BaseState):
         if s.launcher.state_manager.ui_focus != 'content':
             return
 
-        #INPUT FOR THE SEARCHBAR
-        if s.searchbar.active:
-            if s.searchbar.handle_events(events):
-                s.searchbar.active = False
+        # 3. TOPBAR NAVIGATION (Searchbar & Toggle Button)
+        if s.topbar_focus:
+            # Update visual highlight for the button
+            s.fav_toggle.is_selected = (s.topbar_index == 1)
+
+            if keys[controlls['down']]:
+                s.topbar_focus = False
+                s.fav_toggle.is_selected = False
+            
+            elif keys[controlls['left']] or keys[controlls['right']]:
+                s.topbar_index = 1 - s.topbar_index # Toggle between 0 and 1
+                
+            if keys[pygame.K_RETURN] or keys[controlls['action_a']]:
+                if s.topbar_index == 0:
+                    s.searchbar.open_keyboard()
+                else:
+                    s.fav_toggle.toggle()
             return
-        
+
+        # 4. CONTENT NAVIGATION (Game Icons)
         if keys[controlls['action_b']] and len(s.game_library) != 0:
             s.bottombar.open_bottombar()
             return
 
-        #CONTENT NAVIGATION
-        if keys[s.launcher.controlls_data['left']]:
+        if keys[controlls['left']]:
             if s.selected_index == 0:
                 s.launcher.state_manager.ui_focus = "sidebar"
             else:
                 s.selected_index -= 1
-
         elif keys[controlls['right']]:
             s.selected_index = min(len(s.filtered_games) - 1, s.selected_index + 1)
-        
         elif keys[pygame.K_RETURN] or keys[controlls['action_a']]:
             s.launch_game()
-        
         elif keys[controlls['up']]:
-            s.searchbar.active = True
+            s.topbar_focus = True
 
-    #METHOD FOR UPDATING THE LIBRARY
     def update(s, delta_time):
         super().update(delta_time)
         s.current_scroll += (s.selected_index - s.current_scroll) * s.scroll_speed * delta_time
+        s.fav_toggle.update(delta_time)
 
-    #METHOD FOR DRAWING THE CLASS
     def draw(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
         window.fill(theme['colour_1'])
 
         s.draw_game_icons_titles(window)
-
         s.bottombar.draw(window)
-        s.searchbar.draw(window, focused=s.searchbar.active)
+        
+        # Draw Searchbar (focused if topbar_index is 0)
+        search_focused = (s.topbar_focus and s.topbar_index == 0)
+        s.searchbar.draw(window, focused=search_focused)
+
+        # Draw the Favorites Toggle Button
+        s.fav_toggle.draw(window)
 
         super().draw(window)
 
-    #METHOD FOR DRAWING GAMES ICON TITLES
     def draw_game_icons_titles(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-
         if not s.filtered_games:
             msg = s.icon_font.render("NO GAMES INSTALLED", True, theme['colour_2'])
             rect = msg.get_rect(center=((WINDOW_WIDTH + s.launcher.sidebar.base_w) // 2, WINDOW_HEIGHT // 2))
@@ -120,6 +162,7 @@ class Library(BaseState):
         sidebar_w = s.launcher.sidebar.base_w
         workspace_center_x = sidebar_w + (WINDOW_WIDTH - sidebar_w) // 2
         center_y = WINDOW_HEIGHT // 2
+        favorites = s.launcher.game_library_data.get('favorites', [])
 
         for i, folder_name in enumerate(s.filtered_games):
             icon = s.game_icons.get(folder_name)
@@ -133,6 +176,12 @@ class Library(BaseState):
             icon.set_selected(i == s.selected_index)
             icon.draw(window)
 
+            if folder_name in favorites:
+                heart = s.icon_font.render("<3", True, (255, 60, 60)) 
+                heart_rect = heart.get_rect(topright=(x + s.icon_w // 2 - 10, y - s.icon_w // 2 + 10))
+                pygame.draw.rect(window, (30, 30, 30), heart_rect.inflate(4, 4), border_radius=4)
+                window.blit(heart, heart_rect)
+
             if i == s.selected_index:
                 display_name = s.get_game_display_name(folder_name)
                 text = s.icon_font.render(display_name.upper(), True, theme['colour_3'])
@@ -145,90 +194,67 @@ class Library(BaseState):
             return game_data["name"]
         return folder_name.replace("_", " ").title()
 
-    #METHOD FOR GETTING GAMES LIBRARY DATA
     def get_game_library(s):
         s.manifest = load_data(s.manifest_path, {})
-        
-        #CREATING A GAMES FOLDER IF FILES CORUPTED
         if not os.path.exists(GAMES_DIR):
             os.makedirs(GAMES_DIR)
             s.game_library = []
-
-        #PLAYERS GAME LIBRARY
         else:
             s.game_library = [
                 name for name in os.listdir(GAMES_DIR)
                 if os.path.isdir(os.path.join(GAMES_DIR, name))
             ]
 
-        #GETTING THE GAME ICONS
         for game in s.game_library:
             s.game_icons[game] = GameIcon(
-                launcher = s.launcher,
-                groups = s.icon_group,
-                game_id = game,
-                size = s.icon_w,
-                path = os.path.join(GAMES_DIR, game, 'assets', 'icon')
+                launcher=s.launcher,
+                groups=s.icon_group,
+                game_id=game,
+                size=s.icon_w,
+                path=os.path.join(GAMES_DIR, game, 'assets', 'icon')
             )
-
         s.apply_search_filter(s.searchbar.text)
 
     def apply_search_filter(s, query):
         query = query.lower()
-        
         s.filtered_games = []
+        favorites = s.launcher.game_library_data.get('favorites', [])
+        
         for game_name in s.game_library:
+            if s.show_favorites_only and game_name not in favorites:
+                continue
+                
             display_name = s.get_game_display_name(game_name)
             if not query or query in display_name.lower():
                 s.filtered_games.append(game_name)
-        
         s.selected_index = 0
 
     def on_enter(self):
         self.get_game_library()
 
     def launch_game(self):
-        """Uruchamia wybraną grę w nowym procesie z uwzględnieniem ustawień wydajności."""
-        if not self.filtered_games:
-            return
-
-        # 1. PRZYGOTOWANIE ŚCIEŻEK
+        if not self.filtered_games: return
         folder_name = self.filtered_games[self.selected_index]
         game_path = os.path.join(GAMES_DIR, folder_name, 'code')
-        
         game_data = self.manifest.get(folder_name, {})
         main_file = game_data.get("main.py", "main.py") 
         full_path = os.path.join(game_path, main_file)
 
-        if not os.path.exists(full_path):
-            print(f"Error: Could not find startup file at {full_path}")
-            return
+        if not os.path.exists(full_path): return
 
-        # 2. URUCHOMIENIE GRY (Blok try łapie tylko błędy startu procesu)
         try:
-            print(f"Launching {folder_name}...")
             subprocess.Popen(
                 [sys.executable, full_path],
                 cwd=game_path,
                 creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
             )
         except Exception as e:
-            print(f"Failed to start the game process: {e}")
-            return # Wychodzimy, jeśli gra w ogóle nie wystartowała
+            print(f"Failed to start: {e}")
+            return
 
-        # 3. OBSŁUGA USTAWIEŃ WYDAJNOŚCI (Poza blokiem try-except gry)
         perf_data = self.launcher.performance_settings_data
-        
-        # Scenariusz A: Całkowite zamknięcie launchera
         if perf_data.get('turn_off_launcher_when_game_active'):
-            print("Closing launcher as requested in performance settings.")
             pygame.quit()
-            sys.exit() # Teraz zadziała poprawnie, bo nie jest wewnątrz try-except przechwytującego Exception
-
-        # Scenariusz B: Launcher zostaje w tle, ale oszczędza zasoby
+            sys.exit()
         else:
-            target_fps = perf_data.get('decrease_launcher_fps_when_game_active', 30)
-            print(f"Game started. Lowering launcher background FPS to: {target_fps}")
-            
-            # Ustawienie FPS dla głównej pętli launchera
-            self.fps = target_fps
+            self.fps = perf_data.get('decrease_launcher_fps_when_game_active', 30)

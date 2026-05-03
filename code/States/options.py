@@ -114,18 +114,30 @@ class Options(BaseState):
             tab_rect = pygame.Rect(x, y, w, h)
 
             is_selected = (i == s.topbar_index)
+            has_focus = (s.launcher.state_manager.ui_focus == 'topbar')
 
-            bg_color = theme['colour_2'] if is_selected else theme['colour_4']
-            text_color = theme['colour_1'] if is_selected else theme['colour_3']
+            # Use stronger color when tab is selected AND topbar has focus
+            if is_selected and has_focus:
+                bg_color = theme['colour_2']
+                text_color = theme['colour_1']
+                outline_color = theme['colour_1']
+                outline_width = 3
+            elif is_selected:
+                bg_color = theme['colour_4']
+                text_color = theme['colour_3']
+                outline_color = theme['colour_3']
+                outline_width = 2
+            else:
+                bg_color = theme['colour_4']
+                text_color = theme['colour_3']
+                outline_color = (0, 0, 0)
+                outline_width = 1
 
             # Draw rounded tab background
             pygame.draw.rect(window, bg_color, tab_rect, border_radius=12)
 
-            # Draw outline / accent for selected tab
-            if is_selected:
-                pygame.draw.rect(window, theme['colour_1'], tab_rect, 3, border_radius=12)
-            else:
-                pygame.draw.rect(window, (0, 0, 0), tab_rect, 1, border_radius=12)
+            # Draw outline / accent
+            pygame.draw.rect(window, outline_color, tab_rect, outline_width, border_radius=12)
 
             # Draw icon (if generated)
             if i < len(s.tab_icons):
