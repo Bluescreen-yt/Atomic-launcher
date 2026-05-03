@@ -148,6 +148,15 @@ class VideoOptionsTab(GenericOptionsTab):
                     6
                 )
 
+            # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+            if is_selected and has_focus:
+                pygame.draw.rect(
+                    button_surf,
+                    (255, 200, 0),
+                    button_surf.get_rect(),
+                    4
+                )
+
             x = s.initial_pos[0]
             y = s.initial_pos[1] + i * (s.resolution_button_size[1] + 10)
 
@@ -189,6 +198,15 @@ class VideoOptionsTab(GenericOptionsTab):
                     (0, 200, 0),
                     button_surf.get_rect(),
                     6
+                )
+
+            # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+            if is_selected and has_focus:
+                pygame.draw.rect(
+                    button_surf,
+                    (255, 200, 0),
+                    button_surf.get_rect(),
+                    4
                 )
 
             x = s.initial_pos[0] + s.FPS_button_size[0] + 50
@@ -270,24 +288,22 @@ class ControlsOptionsTab(GenericOptionsTab):
         super().__init__(launcher)
         
         s.current_theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-        s.initial_pos = (WINDOW_WIDTH * 0.18, 600)
+        s.initial_pos = (WINDOW_WIDTH * 0.15, 200)
         s.button_size = (280, 80)
-        s.controller_image = import_image(BASE_DIR, 'assets', 'option_assets', 'controlls_tab', 'controller')
-        s.controller_image = pygame.transform.scale_by(s.controller_image, 2)
-        s.controller_rect = s.controller_image.get_rect(center = (WINDOW_WIDTH/2+ WINDOW_WIDTH * 0.05, 450))
+        s.spacing = 15
+        s.column_spacing = 400
         
         s.font = pygame.font.SysFont(None, 60, False)
         s.value_font = pygame.font.SysFont(None, 45, False)
 
-        # Definiujemy grupy klawiszy dla kolumn
+        # Definiujemy grupy klawiszy dla dwóch kolumn
         s.columns = {
-            'movement': ['up', 'down', 'left', 'right'],
-            'system': ['options'],
-            'actions': ['action_a', 'action_b', 'action_x', 'action_y']
+            'left': ['up', 'down', 'left', 'right'],
+            'right': ['options', 'action_a', 'action_b']
         }
-        s.column_names = ['movement', 'system', 'actions']
+        s.column_names = ['left', 'right']
         
-        s.active_col_idx = 0  # 0: lewa, 1: środek, 2: prawa
+        s.active_col_idx = 0  # 0: lewa, 1: prawa
         s.selected_index = 0  # Indeks wewnątrz danej kolumny
         
         s.waiting_for_key = False
@@ -330,7 +346,6 @@ class ControlsOptionsTab(GenericOptionsTab):
 
     def draw(s, window):
         has_focus = (s.launcher.state_manager.ui_focus == 'content')
-        window.blit(s.controller_image, s.controller_rect)
         
         # Rysowanie każdej kolumny
         for col_idx, col_name in enumerate(s.column_names):
@@ -351,13 +366,17 @@ class ControlsOptionsTab(GenericOptionsTab):
                     bg_colour = s.current_theme['colour_4']
                     text_colour = s.current_theme['colour_2']
 
-                # Pozycjonowanie (3 kolumny)
-                x = s.initial_pos[0] + col_idx * (s.button_size[0] + 300)
-                y = s.initial_pos[1] + row_idx * (s.button_size[1] + 15)
+                # Pozycjonowanie (2 kolumny)
+                x = s.initial_pos[0] + col_idx * s.column_spacing
+                y = s.initial_pos[1] + row_idx * (s.button_size[1] + s.spacing)
 
                 # Przycisk
                 rect = pygame.Rect(x, y, s.button_size[0], s.button_size[1])
                 pygame.draw.rect(window, bg_colour, rect)
+                
+                # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+                if is_selected and has_focus:
+                    pygame.draw.rect(window, (255, 200, 0), rect, 4)
                 
                 # Tekst: Akcja i Klawisz
                 key_code = s.launcher.controlls_data[action_name]
@@ -460,6 +479,10 @@ class PerformanceOptionsTab(GenericOptionsTab):
             if is_active:
                 pygame.draw.rect(window, (0, 255, 0), rect, 3, border_radius=5)
 
+            # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+            if is_selected:
+                pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=5)
+
             text_surf = s.font.render(f"{fps} FPS", True, text_col)
             text_rect = text_surf.get_rect(center=rect.center)
             window.blit(text_surf, text_rect)
@@ -480,6 +503,10 @@ class PerformanceOptionsTab(GenericOptionsTab):
 
         rect = pygame.Rect(x_pos, s.initial_pos[1], s.shutdown_button_size[0], s.shutdown_button_size[1])
         pygame.draw.rect(window, bg_col, rect, border_radius=10)
+
+        # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+        if is_selected:
+            pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=10)
 
         # Tekst przycisku
         main_text = "Shutdown Launcher"
@@ -570,6 +597,10 @@ class ThemesOptionsTab(GenericOptionsTab):
             # Active indicator (Border)
             if is_active:
                 pygame.draw.rect(window, (255, 255, 255), rect, 4, border_radius=10)
+
+            # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+            if is_hovered:
+                pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=10)
 
             # Theme Name
             text_surf = s.font.render(name, True, text_col)
