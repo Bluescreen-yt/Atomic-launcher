@@ -42,5 +42,5 @@ else
     echo "No internet connection. Skipping updates."
 fi
 
-echo "Starting DonutPi OS..."
+echo "Starting Atomic Launcher..."
 "$PYTHON" code/main.py

@@ -14,7 +14,7 @@ from Tools.game_installer import GameInstaller
 from States.state_manager import StateManager
 from UI.sidebar import Sidebar
 from States.library import Library
-from Store.store import Store
+from States.store import Store
 from States.options import Options
 from Store.game_preview import GamePreview
 

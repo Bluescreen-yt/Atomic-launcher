@@ -4,6 +4,7 @@ import math
 
 from settings import BASE_DIR, WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, get_contrast_text_color
 from UI.store_ui.store_entry import StoreEntry, GameStatus
+from UI.store_ui.feature_frame import FeatureFrame
 from UI.searchbar import SearchBar
 from UI.store_ui.progress_bar import Bar
 from States.generic_state import BaseState
@@ -14,7 +15,8 @@ from Tools.asset_importing_tool import import_image
 class Store(BaseState):
     def __init__(s, launcher):
         super().__init__(launcher)
-
+        launcher.store = s
+        
         # INTERNET
         s.online = launcher.checking_internet_connection()
 
@@ -23,9 +25,9 @@ class Store(BaseState):
         s.search_query = ""
         s.searchbar = SearchBar(
             launcher,
-            on_change=s.on_search_change,
-            width=500,
-            height=60
+            on_change = s.on_search_change,
+            width = 500,
+            height = 60
         )
 
         # CATEGORY TABS
@@ -34,6 +36,13 @@ class Store(BaseState):
 
         # SORTING
         s.sort_mode = "A-Z"
+
+        s.header_h = 40
+        s.tabs_y = 55
+        s.store_top = 95
+        s.feature_frame_height = 420
+        s.entry_height = 190
+        s.spacing = 20
 
         # GRID SETTINGS
         s.columns = 2
@@ -49,10 +58,13 @@ class Store(BaseState):
         s.selected_index = 0
         s.scroll = 0
         s.target_scroll = 0 
+        s.focus_order = ["searchbar", "featured", "tabs", "content", "download"]
 
         # LOAD MANIFEST
         s.manifest_path = join(BASE_DIR, 'code', 'Store', 'games_manifest.json')
         s.manifest = load_data(s.manifest_path, {})
+        s.feature_frame_height = 520
+        s.feature_frame = FeatureFrame(launcher, s.manifest)
 
         s.was_downloading = False
 
@@ -78,7 +90,7 @@ class Store(BaseState):
             return
 
         x_start = s.launcher.sidebar.base_w + 40
-        y_current = 20
+        y_current = 5
 
         # Current downloading
         if s.launcher.installer.is_downloading:
@@ -87,7 +99,7 @@ class Store(BaseState):
             icon_path = join(BASE_DIR, 'assets', 'store_assets', current_id, 'icon')
             try:
                 icon = import_image(icon_path)
-                icon = pygame.transform.smoothscale(icon, (60, 60))
+                icon = pygame.transform.smoothscale(icon, (45, 45))
                 window.blit(icon, (x_start, y_current))
             except:
                 pass
@@ -187,7 +199,7 @@ class Store(BaseState):
         entry_width = (available_width - s.spacing) // s.columns
 
         start_x = fixed_sidebar_w + panel_padding
-        start_y = 200
+        start_y = s.store_top + s.feature_frame_height + 20
 
         for i, game_id in enumerate(s.filtered_games):
             data = s.manifest[game_id]
@@ -234,72 +246,114 @@ class Store(BaseState):
         btn_up = controlls.get('up', pygame.K_UP)
         btn_down = controlls.get('down', pygame.K_DOWN)
 
-        # 1. SEARCHBAR FOCUS LOGIC[cite: 16, 18]
+        # Check if download panel is physically visible
+        is_downloading_active = s.launcher.installer.is_downloading or s.launcher.installer.download_queue
+
+        # 1. SEARCHBAR FOCUS (Top Right)
         if state_manager.ui_focus == "searchbar":
             if s.searchbar.active:
-                # If currently typing, let the searchbar consume events[cite: 16]
                 if s.searchbar.handle_events(events):
                     state_manager.ui_focus = "tabs"
-                return # Don't process other keys while typing
-            else:
-                # Navigating the searchbar area
-                if action_confirm:
-                    s.searchbar.open_keyboard()
-                elif keys[btn_down]:
+                elif action_back:
+                    s.searchbar.active = False
                     state_manager.ui_focus = "tabs"
-                elif keys[btn_left]:
-                    if s.launcher.installer.is_downloading:
-                        state_manager.ui_focus = "download"
-            return
+                return
 
-        # 2. TABS FOCUS LOGIC[cite: 18]
-        if state_manager.ui_focus == "tabs":
-            if keys[btn_left] or action_back:
-                if s.selected_tab_index > 0:
-                    s.selected_tab_index -= 1
-                    s.apply_filters()
-            elif keys[btn_right]:
-                s.selected_tab_index = min(len(s.tabs) - 1, s.selected_tab_index + 1)
-                s.apply_filters()
-            elif keys[btn_up]:
-                state_manager.ui_focus = "searchbar"
-            elif keys[btn_down]:
-                if s.launcher.installer.is_downloading:
-                    state_manager.ui_focus = "download"
-                elif s.entries:
-                    state_manager.ui_focus = "content"
-            return
+            if action_confirm:
+                s.searchbar.open_keyboard()
+                return
+            if keys[btn_left] and is_downloading_active:
+                state_manager.ui_focus = "download"
+                return
+            if keys[btn_down]:
+                state_manager.ui_focus = "tabs"
+                return
 
-        # 3. CONTENT FOCUS LOGIC[cite: 18]
-        if state_manager.ui_focus == "content":
-            if keys[btn_up]:
-                if s.selected_index < s.columns:
-                    if s.launcher.installer.is_downloading:
-                        state_manager.ui_focus = "download"
-                    else:
-                        state_manager.ui_focus = "tabs"
-                else:
-                    s.selected_index -= s.columns
-            elif keys[btn_down]:
-                if s.selected_index + s.columns < len(s.entries):
-                    s.selected_index += s.columns
-            elif keys[btn_left] or action_back:
-                if s.selected_index % s.columns != 0:
-                    s.selected_index -= 1
-            elif keys[btn_right]:
-                if (s.selected_index + 1) % s.columns != 0 and s.selected_index + 1 < len(s.entries):
-                    s.selected_index += 1
-            elif action_confirm:
-                s.enter_game_preview()
-
-        # 4. DOWNLOAD FOCUS LOGIC
-        if state_manager.ui_focus == "download":
+        # 2. DOWNLOAD FOCUS (Top Left)
+        elif state_manager.ui_focus == "download":
             if action_confirm and s.launcher.installer.is_downloading:
                 s.launcher.installer.cancel_download()
-            elif keys[btn_up]:
+                return
+            if keys[btn_right]:
+                state_manager.ui_focus = "searchbar"
+                return
+            if keys[btn_down]:
                 state_manager.ui_focus = "tabs"
-            elif keys[btn_down]:
+                return
+            if action_back:
+                state_manager.ui_focus = "searchbar"
+                return
+
+        # 3. TABS FOCUS (Second Row)
+        elif state_manager.ui_focus == "tabs":
+            if keys[btn_left] and s.selected_tab_index > 0:
+                s.selected_tab_index -= 1
+                s.apply_filters()
+                return
+            if keys[btn_right] and s.selected_tab_index < len(s.tabs) - 1:
+                s.selected_tab_index += 1
+                s.apply_filters()
+                return
+            if keys[btn_up]:
+                state_manager.ui_focus = "download" if is_downloading_active else "searchbar"
+                return
+            if keys[btn_down]:
+                state_manager.ui_focus = "featured"
+                return
+            if action_confirm:
+                state_manager.ui_focus = "featured"
+                return
+            if action_back:
+                state_manager.ui_focus = "searchbar"
+                return
+
+        # 4. FEATURED FOCUS (Third Row)
+        elif state_manager.ui_focus == "featured":
+            if keys[btn_left]:
+                s.feature_frame.previous()
+                return
+            if keys[btn_right]:
+                s.feature_frame.next()
+                return
+            if keys[btn_up]:
+                state_manager.ui_focus = "tabs"
+                return
+            if keys[btn_down] and s.entries:
                 state_manager.ui_focus = "content"
+                return
+            if action_confirm:
+                s.enter_game_preview()
+                return
+            if action_back:
+                state_manager.ui_focus = "tabs"
+                return
+
+        # 5. CONTENT GRID FOCUS (Bottom Row)
+        elif state_manager.ui_focus == "content":
+            if action_back:
+                state_manager.ui_focus = "featured"
+                return
+            if keys[btn_left]:
+                if s.selected_index % s.columns != 0:
+                    s.selected_index -= 1
+                return
+            if keys[btn_right]:
+                # Move right only if it doesn't cross into the next row visually
+                if (s.selected_index + 1) % s.columns != 0 and s.selected_index + 1 < len(s.entries):
+                    s.selected_index += 1
+                return
+            if keys[btn_up]:
+                if s.selected_index < s.columns:
+                    state_manager.ui_focus = "featured"
+                else:
+                    s.selected_index -= s.columns
+                return
+            if keys[btn_down] and s.selected_index + s.columns < len(s.entries):
+                s.selected_index += s.columns
+                return
+            if action_confirm:
+                s.enter_game_preview()
+                return
 
         # Global Hotkeys
         if keys[pygame.K_s]:
@@ -314,8 +368,13 @@ class Store(BaseState):
                 if hasattr(s, 'cancel_rect') and s.cancel_rect.collidepoint(event.pos):
                     s.launcher.installer.cancel_download()
 
+                clicked_nav = s.feature_frame.handle_mouse_event(event)
+                if not clicked_nav and s.feature_frame.frame_rect.collidepoint(event.pos):
+                    s.enter_game_preview()
+
     def update(s, delta_time):
         super().update(delta_time)
+        s.feature_frame.update(delta_time)
         if not s.online or not s.entries:
             return
 
@@ -326,23 +385,39 @@ class Store(BaseState):
             if not current_downloading:
                 s.update_statuses()
 
-        row = s.selected_index // s.columns
-        start_y = 190
-        current_y = start_y + row * (s.entry_height + s.spacing)
-        panel_y = 190
-        panel_h = WINDOW_HEIGHT - 210
+        # ---------- UNIFIED SCROLLING LOGIC ----------
+        view_top = s.store_top
+        view_bottom = WINDOW_HEIGHT - 20
 
-        if current_y + s.entry_height > s.target_scroll + panel_y + panel_h - 20:
-            s.target_scroll = current_y + s.entry_height - (panel_y + panel_h - 20)
-        if current_y < s.target_scroll + panel_y + 20:
-            s.target_scroll = current_y - (panel_y + 20)
+        # Jump to top if focused on featured
+        if s.launcher.state_manager.ui_focus == "featured":
+            s.target_scroll = 0
+            
+        elif s.launcher.state_manager.ui_focus == "content":
+            row = s.selected_index // s.columns
+            start_y = s.store_top + s.feature_frame_height + 20
+            current_y = start_y + row * (s.entry_height + s.spacing)
 
+            # Track where the entry is visually on the screen
+            entry_screen_top = current_y - s.target_scroll
+            entry_screen_bottom = entry_screen_top + s.entry_height
+
+            # Push camera down or up to keep the entry in the view bounds
+            if entry_screen_bottom > view_bottom:
+                s.target_scroll = current_y + s.entry_height - view_bottom
+            if entry_screen_top < view_top:
+                s.target_scroll = current_y - view_top
+
+        # Clamp max scroll so we don't scroll into the void
         s.target_scroll = max(0, s.target_scroll)
         total_rows = math.ceil(len(s.entries) / s.columns)
-        total_content_height = (total_rows * (s.entry_height + s.spacing)) + 40
-        max_scroll = max(0, total_content_height - panel_h)
+        
+        # Total height now includes feature frame + content grid + padding
+        total_content_height = s.feature_frame_height + 40 + (total_rows * (s.entry_height + s.spacing))
+        max_scroll = max(0, total_content_height - (WINDOW_HEIGHT - s.store_top))
         s.target_scroll = min(s.target_scroll, max_scroll)
 
+        # Smooth scrolling application
         lerp_speed = min(1.0, 15 * delta_time) if delta_time < 1.0 else 0.15
         s.scroll += (s.target_scroll - s.scroll) * lerp_speed
         if abs(s.target_scroll - s.scroll) < 0.5:
@@ -353,7 +428,7 @@ class Store(BaseState):
         window.fill(theme['colour_1'])
 
         # ---------- HEADER ----------
-        header_h = 120
+        header_h = s.header_h
         pygame.draw.rect(window, theme['colour_4'], (s.launcher.sidebar.base_w, 0, WINDOW_WIDTH, header_h))
 
         # Download panel
@@ -366,60 +441,87 @@ class Store(BaseState):
         info_font = pygame.font.SysFont(None, 24)
         controls_text = f"Hotkeys: [TAB] Sidebar | [E] Back | [R] Details | [S] Sort: {s.sort_mode}"
         sort_text = info_font.render(controls_text, True, theme['colour_4'])
-        text_x = WINDOW_WIDTH - sort_text.get_width() - 40
-        window.blit(sort_text, (text_x, 155))
+        text_x = WINDOW_WIDTH - sort_text.get_width() - 120
+        window.blit(sort_text, (text_x, s.tabs_y + 20))
 
-        # ---------- CONTENT PANEL ----------
+        # ==========================================
+        #        UNIFIED SCROLLABLE VIEW AREA
+        # ==========================================
+        view_top = s.store_top
+        view_rect = pygame.Rect(
+            s.launcher.sidebar.base_w,
+            view_top,
+            WINDOW_WIDTH - s.launcher.sidebar.base_w,
+            WINDOW_HEIGHT - view_top
+        )
+        
+        # Apply clip to the whole lower screen
+        window.set_clip(view_rect)
+
+        # 1. Draw Feature Frame inside scroll area (pass the scroll offset)
+        s.feature_frame.draw(window, theme, scroll_offset=s.scroll)
+
+        # 2. Draw Content Grid Panel
+        total_rows = math.ceil(len(s.entries) / s.columns)
+        grid_height = (total_rows * (s.entry_height + s.spacing)) + 40
+        
+        # Stretch background panel to bottom if there are barely any games
+        min_panel_height = WINDOW_HEIGHT - (view_top + s.feature_frame_height + 20)
+        panel_h = max(grid_height, min_panel_height)
+
+        panel_top = view_top + s.feature_frame_height + 20 - s.scroll
         panel_rect = pygame.Rect(
             s.launcher.sidebar.base_w + 20,
-            190,
+            panel_top,
             WINDOW_WIDTH - s.launcher.sidebar.base_w - 40,
-            WINDOW_HEIGHT - 210
+            panel_h
         )
 
         pygame.draw.rect(window, theme['colour_4'], panel_rect, border_radius=16)
         pygame.draw.rect(window, theme['colour_3'], panel_rect, 2, border_radius=16)
 
-        clip_rect = panel_rect.inflate(-6, -6)
-        window.set_clip(clip_rect)
-
+        # 3. Draw Entries inside the panel
         for i, entry in enumerate(s.entries):
             selected = i == s.selected_index and s.launcher.state_manager.ui_focus == "content"
             row = i // s.columns
-            start_y = 200
-            original_y = start_y + row * (s.entry_height + s.spacing)
+            start_y = view_top + s.feature_frame_height + 20
+            original_y = start_y + row * (s.entry_height + s.spacing) + 20 # 20 is inner top padding
+            
+            # Translate position based on scroll
             entry.rect.top = original_y - s.scroll
 
-            if entry.rect.bottom > panel_rect.top and entry.rect.top < panel_rect.bottom:
+            # Performance check: Only draw if it intersects the physical view area
+            if entry.rect.bottom > view_rect.top and entry.rect.top < view_rect.bottom:
                 entry.draw(window)
                 if selected:
                     highlight = entry.rect.inflate(14, 14)
                     pygame.draw.rect(window, theme['colour_2'], highlight, 8, border_radius=14)
 
-        # ---------- CUSTOM SCROLLBAR ----------
-        total_rows = math.ceil(len(s.entries) / s.columns)
-        total_content_height = (total_rows * (s.entry_height + s.spacing)) + 40
-        if total_content_height > panel_rect.height:
+        # 4. Draw Custom Scrollbar mapping the unified height
+        total_content_height = s.feature_frame_height + 20 + grid_height
+        if total_content_height > view_rect.height:
             scrollbar_w = 8
-            visible_ratio = panel_rect.height / total_content_height
-            scrollbar_h = max(40, panel_rect.height * visible_ratio)
-            max_scroll = total_content_height - panel_rect.height
+            visible_ratio = view_rect.height / total_content_height
+            scrollbar_h = max(40, view_rect.height * visible_ratio)
+            max_scroll = total_content_height - view_rect.height
             scroll_progress = s.scroll / max_scroll if max_scroll > 0 else 0
-            scrollbar_y = panel_rect.top + 5 + scroll_progress * (panel_rect.height - scrollbar_h - 10)
-            scrollbar_x = panel_rect.right - 15
             
-            track_rect = pygame.Rect(scrollbar_x, panel_rect.top + 5, scrollbar_w, panel_rect.height - 10)
+            scrollbar_y = view_rect.top + 5 + scroll_progress * (view_rect.height - scrollbar_h - 10)
+            scrollbar_x = view_rect.right - 15
+            
+            # Track
+            track_rect = pygame.Rect(scrollbar_x, view_rect.top + 5, scrollbar_w, view_rect.height - 10)
             pygame.draw.rect(window, theme['colour_1'], track_rect, border_radius=4)
-            
+            # Handle
             scroll_rect = pygame.Rect(scrollbar_x, scrollbar_y, scrollbar_w, scrollbar_h)
             pygame.draw.rect(window, theme['colour_2'], scroll_rect, border_radius=4)
 
+        # Lift the clip rect so UI overlays (like the search drop down) draw correctly
         window.set_clip(None)
 
         # ---------- SEARCH BAR (DRAWN LAST) ----------
-        # Moving this here ensures the internal keyboard overlay is drawn on top of EVERYTHING[cite: 16]
         s.searchbar.custom_x = WINDOW_WIDTH - 600
-        s.searchbar.custom_y = 25
+        s.searchbar.custom_y = 10
         search_focused = s.launcher.state_manager.ui_focus == "searchbar"
         s.searchbar.draw(window, focused=search_focused)
 
@@ -428,7 +530,7 @@ class Store(BaseState):
     def draw_tabs(s, window, theme):
         font = pygame.font.SysFont(None, 26, bold=True)
         x = s.launcher.sidebar.base_w + 40
-        y = 130
+        y = s.tabs_y
 
         for i, tab in enumerate(s.tabs):
             active = i == s.selected_tab_index
@@ -463,6 +565,9 @@ class Store(BaseState):
     def on_enter(s):
         s.online = s.launcher.checking_internet_connection()
         s.manifest = load_data(s.manifest_path, {})
+        s.feature_frame.refresh(s.manifest)
+        s.selected_index = 0
+        s.launcher.state_manager.ui_focus = "featured"
         if s.online:
             s.all_games = list(s.manifest.keys())
             s.apply_filters()

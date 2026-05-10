@@ -72,7 +72,7 @@ IF %ERRORLEVEL% EQU 0 (
 )
 
 REM --- URUCHAMIANIE GRY ---
-echo Starting DonutPi OS...
+echo Starting Atomic Launcher...
 "%PYTHON%" code\main.py
 
 pause

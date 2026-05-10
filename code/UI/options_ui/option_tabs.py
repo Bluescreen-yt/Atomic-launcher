@@ -532,7 +532,7 @@ class ThemesOptionsTab(GenericOptionsTab):
         super().__init__(launcher)
         
         # UI Layout
-        s.initial_pos = (WINDOW_WIDTH * 0.2, 250)
+        s.initial_pos = (WINDOW_WIDTH * 0.3, 175)
         s.button_size = (500, 100)
         s.spacing = 20
         
