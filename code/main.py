@@ -156,6 +156,7 @@ class Launcher:
 
     #METHOD FOR HANDLING EVENTS
     def handling_events(s):
+        s.poll_gpio_events()
         events = pygame.event.get()
         for event in events:
 
@@ -221,6 +222,14 @@ class Launcher:
 
         # UPDATING CURRENT STATE
         s.state_manager.update(s.delta_time)
+
+    #METHOD FOR POLLING GPIO INPUTS
+    def poll_gpio_events(s):
+        if s.gpio_controller is None:
+            return
+
+        for key in s.gpio_controller.get_pending_keys():
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': key, 'mod': pygame.KMOD_NONE}))
 
     #METHOD FOR DRAWING THE LAUNCHER
     def draw(s):
