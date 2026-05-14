@@ -21,13 +21,20 @@ class StateManager:
                 s.active_state.on_enter()
 
     def handling_events(s, events):
-        keys = pygame.key.get_just_pressed()
+        # Retrieve the key map from settings
+        options_key = s.launcher.controlls_data['keyboard']['options']
 
-        if keys[s.launcher.controlls_data['keyboard']['options']]:
-            s.ui_focus = "sidebar" if s.ui_focus != "sidebar" else "content"
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                # Check if the 'Options' button (e.g., TAB or GPIO 24) was pressed
+                if event.key == options_key:
+                    s.ui_focus = "sidebar" if s.ui_focus != "sidebar" else "content"
 
+        # Pass input to the appropriate component
         if s.ui_focus == "sidebar":
-            s.launcher.sidebar.handle_input(keys)
+            # Note: You should update sidebar.handle_input to accept 'events' 
+            # instead of 'keys' to keep everything consistent!
+            s.launcher.sidebar.handle_input(events)
         else:
             if s.active_state:
                 s.active_state.handling_events(events)
