@@ -55,3 +55,19 @@ class GameIcon(pygame.sprite.Sprite):
             )
 
         surface.blit(self.image, self.rect)
+
+        if self.launcher.installer.is_downloading and self.launcher.installer.current_game_id == self.game_id:
+            progress = self.launcher.installer.download_progress
+            badge_rect = pygame.Rect(
+                self.rect.left,
+                self.rect.bottom - 26,
+                self.rect.width,
+                24
+            )
+            pygame.draw.rect(surface, (0, 0, 0), badge_rect)
+            pygame.draw.rect(surface, (220, 200, 40), badge_rect, 2, border_radius=8)
+
+            font = pygame.font.SysFont(None, 18, bold=True)
+            status_text = f"DOWNLOADING {int(progress)}%"
+            text_surf = font.render(status_text, True, (255, 255, 255))
+            surface.blit(text_surf, text_surf.get_rect(center=badge_rect.center))

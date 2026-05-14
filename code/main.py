@@ -63,7 +63,6 @@ class Launcher:
         pygame.display.set_caption('[ATOMIC LAUNCHER]')
         pygame.display.set_icon(pygame.image.load(join(BASE_DIR, 'assets', 'icon.png')))
 
-
         #INITALIZING CLOCK
         s.clock = pygame.time.Clock()
         s.fps = s.window_data['fps']
