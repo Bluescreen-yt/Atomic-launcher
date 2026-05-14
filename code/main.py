@@ -5,9 +5,9 @@ from os import environ
 import platform
 import socket
 try:
-    import RPi.GPIO as GPIO
+    from gpiozero import Button
 except ImportError:
-    GPIO = None
+    Button = None
 
 
 #IMPORTING FILES
@@ -54,9 +54,11 @@ class Launcher:
         #LOADING IN LAUNCHER DATA
         s.loading_in_launcher_data()
 
-        # --- GPIO INITIALIZATION ---
-        s.gpio_btn_states = {} # Tracks state to prevent event flooding
-        if s.is_pi and GPIO:
+        # --- UPDATED GPIO INITIALIZATION ---
+        s.buttons = {} # Stores our Button objects
+        s.gpio_btn_states = {} 
+        
+        if s.is_pi and Button:
             s.setup_gpio()
 
         #SETTING UP THE DISPLAY
@@ -85,38 +87,37 @@ class Launcher:
         s.game_running = False
 
     def setup_gpio(s):
-        """Initializes pins based on gpio_controlls_data."""
-        GPIO.setmode(GPIO.BCM)
+        """Initializes pins using gpiozero (compatible with Pi 5)."""
         for action, pin in s.gpio_controlls_data.items():
-            # Setting up as input with Pull-Up resistor (button connects to GND)
-            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-            s.gpio_btn_states[pin] = False # Initial state (not pressed)
+            try:
+                # pull_up=True means we connect the button between Pin and GND
+                s.buttons[action] = Button(pin, pull_up=True)
+                s.gpio_btn_states[action] = False
+            except Exception as e:
+                print(f"Could not initialize GPIO pin {pin} for {action}: {e}")
 
     def poll_gpio(s):
-        """Checks GPIO states and injects Pygame events."""
-        if not s.is_pi or not GPIO:
+        """Checks Button states and injects Pygame events."""
+        if not s.is_pi or not s.buttons:
             return
 
-        for action, pin in s.gpio_controlls_data.items():
-            # Buttons with Pull-Up resistors are 'False' (0) when pressed
-            is_pressed = not GPIO.input(pin) 
+        for action, btn in s.buttons.items():
+            # In gpiozero, .is_pressed returns True if the button is pushed
+            is_pressed = btn.is_pressed
             
-            # Check for State Change (Edge Detection)
-            if is_pressed and not s.gpio_btn_states[pin]:
-                # Button Pressed: Post a KEYDOWN event
+            if is_pressed and not s.gpio_btn_states[action]:
+                # Button Pressed -> Post KEYDOWN
                 key_to_simulate = s.controlls_data['keyboard'].get(action)
                 if key_to_simulate:
-                    new_event = pygame.event.Event(pygame.KEYDOWN, {'key': key_to_simulate})
-                    pygame.event.post(new_event)
-                s.gpio_btn_states[pin] = True
+                    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': key_to_simulate}))
+                s.gpio_btn_states[action] = True
 
-            elif not is_pressed and s.gpio_btn_states[pin]:
-                # Button Released: Post a KEYUP event
+            elif not is_pressed and s.gpio_btn_states[action]:
+                # Button Released -> Post KEYUP
                 key_to_simulate = s.controlls_data['keyboard'].get(action)
                 if key_to_simulate:
-                    new_event = pygame.event.Event(pygame.KEYUP, {'key': key_to_simulate})
-                    pygame.event.post(new_event)
-                s.gpio_btn_states[pin] = False
+                    pygame.event.post(pygame.event.Event(pygame.KEYUP, {'key': key_to_simulate}))
+                s.gpio_btn_states[action] = False
 
     #METHOD FOR CHECKING OPERATING SYSTEM
     def checking_operating_system(s):
