@@ -107,6 +107,7 @@ class Launcher:
             is_pressed = btn.is_pressed
             
             if is_pressed and not s.gpio_btn_states[action]:
+                print(f"GPIO {action} triggered!")
                 # Button Pressed -> Post KEYDOWN
                 key_to_simulate = s.controlls_data['keyboard'].get(action)
                 if key_to_simulate:
