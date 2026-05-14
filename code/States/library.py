@@ -222,7 +222,7 @@ class Library(BaseState):
                 groups=s.icon_group,
                 game_id=game,
                 size=s.icon_w,
-                path=os.path.join(GAMES_DIR, game, 'assets', 'icon')
+                path=os.path.join(BASE_DIR, 'assets', 'store_assets', game, 'icon')
             )
         s.apply_search_filter(s.searchbar.text)
 

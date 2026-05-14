@@ -5,7 +5,6 @@ from os import environ
 import platform
 import socket
 
-
 #IMPORTING FILES
 from settings import *
 from Tools.data_loading_tools import load_data, save_data
@@ -278,6 +277,10 @@ if __name__ == '__main__':
         launcher = Launcher()
         print(launcher)
         launcher.run()
+
+    #CATCHING MANUAL TERMINATION (CTRL+C) FOR A CLEAN EXIT
+    except KeyboardInterrupt:
+        print("\nLauncher terminated manually.")
 
     #CATCHING ANY ERRORS SO THE USER CAN TROUBLESHOOT
     except Exception as e:
