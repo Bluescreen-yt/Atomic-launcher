@@ -279,6 +279,9 @@ class Launcher:
         #MAIN APPLICATION LOOP
         while True:
 
+            # 1. Check GPIO before standard event handling
+            s.poll_gpio()
+
             #HANDILING EVENTS
             s.handling_events()
 
