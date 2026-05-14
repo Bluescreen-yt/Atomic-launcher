@@ -21,6 +21,7 @@ DEFAULT_GAME_LIBRARY_DATA = {
 #CONTROLLS SETTIGNS
 CONTROLLS_DATA_PATH = join(BASE_DIR, 'data', 'controlls_data.json')
 DEFAULT_CONTROLLS_DATA = {
+    'keyboard' : {
     'up' : pygame.K_UP,
     'down' : pygame.K_DOWN,
     'left' : pygame.K_LEFT,
@@ -30,6 +31,31 @@ DEFAULT_CONTROLLS_DATA = {
     'action_b' : pygame.K_e,
     'action_x' : pygame.K_w,
     'action_y' : pygame.K_q
+},
+    'controller' : {
+    'up' : 0,
+    'down' : 1,
+    'left' : 2,
+    'right' : 3,
+    'options' : 4,
+    'action_a' : 5,
+    'action_b' : 6,
+    'action_x' : 7,
+    'action_y' : 8
+}}
+
+#RASPBERRY PI GPIO CONTROLLER SETTINGS
+GPIO_CONTROLLS_DATA_PATH = join(BASE_DIR, 'data', 'gpio_controlls_data.json')
+DEFAULT_GPIO_CONTROLLS_DATA = {
+    'up' : 17,
+    'down' : 27,
+    'left' : 22,
+    'right' : 23,
+    'options' : 24,
+    'action_a' : 5,
+    'action_b' : 6,
+    'action_x' : 13,
+    'action_y' : 19
 }
 
 #SCREEN / WINDOW SETTINGS
