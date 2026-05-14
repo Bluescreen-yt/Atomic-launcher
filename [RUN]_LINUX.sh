@@ -15,12 +15,12 @@ echo "Python is installed."
 # Check if Raspberry Pi and install GPIO backends if needed
 MODEL_FILE="/proc/device-tree/model"
 if [ -f "$MODEL_FILE" ]; then
-    MODEL=$(cat "$MODEL_FILE")
+    MODEL=$(tr -d '\0' < "$MODEL_FILE")
     echo "Device model: $MODEL"
     if echo "$MODEL" | grep -q "Raspberry Pi"; then
         echo "Raspberry Pi detected. Installing GPIO backends..."
         sudo apt update --quiet
-        sudo apt install -y --quiet python3-rpi.gpio python3-pigpio python3-lgpio
+        sudo apt install -y --quiet swig python3-dev build-essential python3-rpi.gpio python3-pigpio python3-lgpio
         echo "GPIO backends installed."
     else
         echo "Not a Raspberry Pi, skipping GPIO backend install."
