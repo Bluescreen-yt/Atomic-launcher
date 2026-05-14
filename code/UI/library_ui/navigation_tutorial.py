@@ -22,12 +22,25 @@ class NavigationTutorial:
     def is_active(self):
         return self.state in ('entering', 'visible')
 
-    def handle_input(self, keys):
+    def handle_input(self, events):
         if self.state != 'visible':
             return False
 
-        controls = self.launcher.controlls_data
-        if keys[pygame.K_RETURN] or keys[controls['keyboard']['action_a']]:
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break 
+
+        if current_key is None:
+            return False
+
+        # 2. Get the control map
+        controls = self.launcher.controlls_data['keyboard']
+        
+        # 3. Check for dismissal (Action A or Enter)
+        if current_key == pygame.K_RETURN or current_key == controls.get('action_a'):
             self.dismiss()
             return True
 

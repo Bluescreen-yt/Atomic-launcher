@@ -77,24 +77,43 @@ class BottomBar:
             rect = text.get_rect(topright = (pos_x, pos_y + i * s.font_size*3/4))
             window.blit(text, rect)
 
-    def handling_events(s):
-
+    def handling_events(s, events):
         if not s.visible:
             return
 
-        keys = pygame.key.get_just_pressed()
-        controlls = s.launcher.controlls_data
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break 
 
-        if keys[controlls['keyboard']['action_b']]:
+        if current_key is None:
+            return
+
+        # 2. Get the control map
+        controlls = s.launcher.controlls_data['keyboard']
+        
+        # 3. Map current_key to logical navigation
+        is_up = current_key == controlls['up']
+        is_down = current_key == controlls['down']
+        is_back = current_key == controlls['action_b']
+        is_confirm = current_key in [controlls['action_a'], pygame.K_RETURN]
+
+        # --- CLOSE BAR (BACK) ---
+        if is_back:
             s.close_bottombar()
+            return
 
-        if keys[controlls['keyboard']['up']]:
+        # --- VERTICAL NAVIGATION ---
+        if is_up:
             s.index = max(0, s.index - 1)
 
-        elif keys[controlls['keyboard']['down']]:
+        elif is_down:
             s.index = min(len(s.options) - 1, s.index + 1)
 
-        elif keys[controlls['keyboard']['action_a']] or keys[pygame.K_RETURN]:
+        # --- EXECUTE CALLBACK (CONFIRM) ---
+        elif is_confirm:
             s.options[s.index]["callback"]()
             s.close_bottombar()
 

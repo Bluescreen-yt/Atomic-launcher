@@ -241,133 +241,115 @@ class Store(BaseState):
             s.entries.append(entry)
 
     def handling_events(s, events):
-        keys = pygame.key.get_just_pressed()
         state_manager = s.launcher.state_manager
         controlls = getattr(s.launcher, 'controlls_data', {})
-        
-        action_confirm = keys[controlls['keyboard'].get('action_a', pygame.K_RETURN)] or keys[pygame.K_RETURN]
-        action_back = keys[controlls['keyboard'].get('action_b', pygame.K_ESCAPE)] or keys[pygame.K_ESCAPE]
-        
-        btn_left = controlls['keyboard'].get('left', pygame.K_LEFT)
-        btn_right = controlls['keyboard'].get('right', pygame.K_RIGHT)
-        btn_up = controlls['keyboard'].get('up', pygame.K_UP)
-        btn_down = controlls['keyboard'].get('down', pygame.K_DOWN)
+        kb = controlls.get('keyboard', {})
+
+        # Capture the specific key pressed in this frame from the event queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                # Handle the searchbar's internal text input immediately if active
+                if state_manager.ui_focus == "searchbar" and s.searchbar.active:
+                    if s.searchbar.handle_events([event]): # Pass the single event
+                        state_manager.ui_focus = "tabs"
+                    return
+
+        # If no key was pressed this frame, exit early
+        if current_key is None:
+            return
+
+        # Map the current_key to logical actions
+        is_confirm = current_key in [kb.get('action_a'), pygame.K_RETURN]
+        is_back = current_key in [kb.get('action_b'), pygame.K_ESCAPE]
+        is_left = current_key == kb.get('left')
+        is_right = current_key == kb.get('right')
+        is_up = current_key == kb.get('up')
+        is_down = current_key == kb.get('down')
 
         # Check if download panel is physically visible
         is_downloading_active = s.launcher.installer.is_downloading or s.launcher.installer.download_queue
 
-        # 1. SEARCHBAR FOCUS (Top Right)
+        # 1. SEARCHBAR FOCUS
         if state_manager.ui_focus == "searchbar":
-            if s.searchbar.active:
-                if s.searchbar.handle_events(events):
-                    state_manager.ui_focus = "tabs"
-                elif action_back:
-                    s.searchbar.active = False
-                    state_manager.ui_focus = "tabs"
-                return
-
-            if action_confirm:
+            if is_confirm:
                 s.searchbar.open_keyboard()
-                return
-            if keys[btn_left] and is_downloading_active:
+            elif is_back:
+                s.searchbar.active = False
+                state_manager.ui_focus = "tabs"
+            elif is_left and is_downloading_active:
                 state_manager.ui_focus = "download"
-                return
-            if keys[btn_down]:
+            elif is_down:
                 state_manager.ui_focus = "tabs"
-                return
 
-        # 2. DOWNLOAD FOCUS (Top Left)
+        # 2. DOWNLOAD FOCUS
         elif state_manager.ui_focus == "download":
-            if action_confirm and s.launcher.installer.is_downloading:
+            if is_confirm and s.launcher.installer.is_downloading:
                 s.launcher.installer.cancel_download()
-                return
-            if keys[btn_right]:
+            elif is_right:
                 state_manager.ui_focus = "searchbar"
-                return
-            if keys[btn_down]:
+            elif is_down:
                 state_manager.ui_focus = "tabs"
-                return
-            if action_back:
+            elif is_back:
                 state_manager.ui_focus = "searchbar"
-                return
 
-        # 3. TABS FOCUS (Second Row)
+        # 3. TABS FOCUS
         elif state_manager.ui_focus == "tabs":
-            if keys[btn_left] and s.selected_tab_index > 0:
+            if is_left and s.selected_tab_index > 0:
                 s.selected_tab_index -= 1
                 s.apply_filters()
-                return
-            if keys[btn_right] and s.selected_tab_index < len(s.tabs) - 1:
+            elif is_right and s.selected_tab_index < len(s.tabs) - 1:
                 s.selected_tab_index += 1
                 s.apply_filters()
-                return
-            if keys[btn_up]:
+            elif is_up:
                 state_manager.ui_focus = "download" if is_downloading_active else "searchbar"
-                return
-            if keys[btn_down]:
+            elif is_down or is_confirm:
                 state_manager.ui_focus = "featured" if s.selected_tab_index == 0 else "content"
-                return
-            if action_confirm:
-                state_manager.ui_focus = "featured" if s.selected_tab_index == 0 else "content"
-                return
-            if action_back:
+            elif is_back:
                 state_manager.ui_focus = "searchbar"
-                return
 
-        # 4. FEATURED FOCUS (Third Row)
+        # 4. FEATURED FOCUS
         elif state_manager.ui_focus == "featured":
-            if keys[btn_left]:
+            if is_left:
                 s.feature_frame.previous()
-                return
-            if keys[btn_right]:
+            elif is_right:
                 s.feature_frame.next()
-                return
-            if keys[btn_up]:
+            elif is_up:
                 state_manager.ui_focus = "tabs"
-                return
-            if keys[btn_down] and s.entries:
+            elif is_down and s.entries:
                 state_manager.ui_focus = "content"
-                return
-            if action_confirm:
+            elif is_confirm:
                 s.enter_game_preview()
-                return
-            if action_back:
+            elif is_back:
                 state_manager.ui_focus = "tabs"
-                return
 
-        # 5. CONTENT GRID FOCUS (Bottom Row)
+        # 5. CONTENT GRID FOCUS
         elif state_manager.ui_focus == "content":
-            if action_back:
+            if is_back:
                 state_manager.ui_focus = "featured"
-                return
-            if keys[btn_left]:
+            elif is_left:
                 if s.selected_index % s.columns != 0:
                     s.selected_index -= 1
-                return
-            if keys[btn_right]:
-                # Move right only if it doesn't cross into the next row visually
+            elif is_right:
                 if (s.selected_index + 1) % s.columns != 0 and s.selected_index + 1 < len(s.entries):
                     s.selected_index += 1
-                return
-            if keys[btn_up]:
+            elif is_up:
                 if s.selected_index < s.columns:
                     state_manager.ui_focus = "featured" if s.selected_tab_index == 0 else "tabs"
                 else:
                     s.selected_index -= s.columns
-                return
-            if keys[btn_down] and s.selected_index + s.columns < len(s.entries):
+            elif is_down and s.selected_index + s.columns < len(s.entries):
                 s.selected_index += s.columns
-                return
-            if action_confirm:
+            elif is_confirm:
                 s.enter_game_preview()
-                return
 
-        # Global Hotkeys
-        if keys[pygame.K_s]:
+        # Global Hotkeys (Example: Pressing 'S' to sort)
+        if current_key == pygame.K_s:
             s.sort_mode = "Z-A" if s.sort_mode == "A-Z" else "A-Z"
             s.apply_filters()
 
-        s.handle_mouse_events(events)
+            s.handle_mouse_events(events)
 
     def handle_mouse_events(s, events):
         for event in events:

@@ -115,18 +115,19 @@ class FeatureFrame:
         if game_id in s.screenshots and len(s.screenshots[game_id]) > 1:
             s.current_screenshot_index[game_id] = (s.current_screenshot_index[game_id] + 1) % len(s.screenshots[game_id])
 
-    def handle_mouse_event(s, event):
-        if event.type != pygame.MOUSEBUTTONDOWN:
-            return False
+    def handling_events(s, events):
+        # 1. Handle Mouse (GPIO won't trigger this, which is correct)
+        for event in events:
+            if s.feature_frame.handle_mouse_event(event):
+                return 
 
-        if s.left_rect.collidepoint(event.pos):
-            s.previous()
-            return True
-        elif s.right_rect.collidepoint(event.pos):
-            s.next()
-            return True
-
-        return False
+        # 2. Handle GPIO/Keyboard
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == s.launcher.controlls_data['keyboard']['left']:
+                    s.feature_frame.previous() # Triggered by GPIO
+                elif event.key == s.launcher.controlls_data['keyboard']['right']:
+                    s.feature_frame.next()     # Triggered by GPIO
 
     def cycle_screenshot_forward(s):
         if not s.featured_games:

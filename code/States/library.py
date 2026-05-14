@@ -97,7 +97,7 @@ class Library(BaseState):
                     return
 
                 if s.bottombar.visible:
-                    s.bottombar.handling_events()
+                    s.bottombar.handling_events(events)
                     return
 
                 if s.launcher.state_manager.ui_focus != 'content':

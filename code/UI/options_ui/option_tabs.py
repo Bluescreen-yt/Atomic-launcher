@@ -84,56 +84,62 @@ class VideoOptionsTab(GenericOptionsTab):
         s.selected_fps = None
 
     def handling_events(s, events, ctrl):
-        keys = pygame.key.get_just_pressed()
-
         if s.launcher.state_manager.ui_focus != 'content':
             return
+
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break # We only need one key press per frame
+
+        if current_key is None:
+            return
+
+        # 2. Map current_key to actions
+        is_up = current_key == ctrl['up']
+        is_down = current_key == ctrl['down']
+        is_left = current_key == ctrl['left']
+        is_right = current_key == ctrl['right']
+        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
 
         # --- MOVE UP / DOWN / LEFT / RIGHT ---
         if s.active_column == 'resolution':
             col = s.resolution_index % s.resolution_cols
             row = s.resolution_index // s.resolution_cols
             
-            if keys[ctrl['up']]:
+            if is_up:
                 if row > 0:
                     s.resolution_index -= s.resolution_cols
-            elif keys[ctrl['down']]:
+            elif is_down:
                 if (row + 1) * s.resolution_cols + col < len(s.resolution_list):
                     s.resolution_index += s.resolution_cols
             
-            if keys[ctrl['left']]:
+            if is_left:
                 if col > 0:
-                    # Move to left column in same row
                     s.resolution_index -= 1
-                # If at col 0, stay there (can't go further left)
-            elif keys[ctrl['right']]:
+            elif is_right:
                 if col < s.resolution_cols - 1:
-                    # Move to right column in same row
                     s.resolution_index += 1
                 else:
-                    # At rightmost column, switch to FPS column
                     s.active_column = 'fps'
         
         else:  # fps column
-            if keys[ctrl['up']]:
+            if is_up:
                 if s.fps_index > 0:
                     s.fps_index -= 1
-            elif keys[ctrl['down']]:
+            elif is_down:
                 if s.fps_index < len(s.FPS_options) - 1:
                     s.fps_index += 1
             
-            if keys[ctrl['left']]:
-                # Switch back to resolution at rightmost column
+            if is_left:
                 s.active_column = 'resolution'
-                # Position at rightmost column, aligned with FPS row
                 row = min(s.fps_index, (len(s.resolution_list) - 1) // s.resolution_cols)
                 s.resolution_index = row * s.resolution_cols + (s.resolution_cols - 1)
-            elif keys[ctrl['right']]:
-                # Can't go further right from FPS
-                pass
 
         # --- CONFIRM ---
-        if keys[ctrl['action_a']] or keys[pygame.K_RETURN]:
+        if is_confirm:
             if s.active_column == 'resolution':
                 res_label, res_dims = s.resolution_list[s.resolution_index]
                 if res_label == 'Fullscreen':
@@ -348,36 +354,55 @@ class ControlsOptionsTab(GenericOptionsTab):
         if s.launcher.state_manager.ui_focus != 'content':
             return
 
-        if s.waiting_for_key:
-            for event in events:
-                if event.type == pygame.KEYDOWN:
-                    if event.key != pygame.K_ESCAPE:
+        # Capture the key for this frame
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                
+                # --- LOGIC FOR REBINDING KEYS ---
+                if s.waiting_for_key:
+                    if current_key != pygame.K_ESCAPE:
                         col_key = s.column_names[s.active_col_idx]
                         action_name = s.columns[col_key][s.selected_index]
-                        s.update_control(action_name, event.key)
+                        s.update_control(action_name, current_key)
                     s.waiting_for_key = False
+                    return # Exit after rebinding to avoid moving the cursor with the same press
+
+        # If we are waiting for a key and haven't pressed one yet, stop here
+        if s.waiting_for_key:
             return
 
-        keys = pygame.key.get_just_pressed()
+        # If no key was pressed this frame, exit
+        if current_key is None:
+            return
+
+        # Map current_key to logical navigation
+        is_up = current_key == ctrl['up']
+        is_down = current_key == ctrl['down']
+        is_left = current_key == ctrl['left']
+        is_right = current_key == ctrl['right']
+        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
+
         current_col_key = s.column_names[s.active_col_idx]
         num_items = len(s.columns[current_col_key])
 
-        # Nawigacja POZIOMA (między kolumnami)
-        if keys[ctrl['left']]:
+        # --- HORIZONTAL NAVIGATION ---
+        if is_left:
             s.active_col_idx = max(0, s.active_col_idx - 1)
             s.selected_index = min(s.selected_index, len(s.columns[s.column_names[s.active_col_idx]]) - 1)
-        elif keys[ctrl['right']]:
+        elif is_right:
             s.active_col_idx = min(len(s.column_names) - 1, s.active_col_idx + 1)
             s.selected_index = min(s.selected_index, len(s.columns[s.column_names[s.active_col_idx]]) - 1)
 
-        # Nawigacja PIONOWA
-        if keys[ctrl['up']]:
+        # --- VERTICAL NAVIGATION ---
+        if is_up:
             s.selected_index = max(0, s.selected_index - 1)
-        elif keys[ctrl['down']]:
+        elif is_down:
             s.selected_index = min(num_items - 1, s.selected_index + 1)
 
-        # Aktywacja zmiany
-        if keys[ctrl['action_a']] or keys[pygame.K_RETURN]:
+        # --- ACTIVATE REBINDING ---
+        if is_confirm:
             s.waiting_for_key = True
 
     def draw(s, window):
@@ -468,27 +493,45 @@ class PerformanceOptionsTab(GenericOptionsTab):
         if s.launcher.state_manager.ui_focus != 'content':
             return
 
-        keys = pygame.key.get_just_pressed()
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break 
 
-        # Zmiana kolumny
-        if keys[ctrl['left']] or keys[ctrl['right']]:
+        if current_key is None:
+            return
+
+        # 2. Map current_key to logical navigation
+        is_up = current_key == ctrl['up']
+        is_down = current_key == ctrl['down']
+        is_left = current_key == ctrl['left']
+        is_right = current_key == ctrl['right']
+        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
+
+        # --- COLUMN SWITCHING ---
+        if is_left or is_right:
             s.active_col = 'shutdown' if s.active_col == 'fps' else 'fps'
 
-        # Nawigacja pionowa (tylko dla kolumny FPS)
+        # --- VERTICAL NAVIGATION (FPS Column Only) ---
         if s.active_col == 'fps':
-            if keys[ctrl['up']]:
+            if is_up:
                 s.fps_index = (s.fps_index - 1) % len(s.fps_levels)
-            elif keys[ctrl['down']]:
+            elif is_down:
                 s.fps_index = (s.fps_index + 1) % len(s.fps_levels)
 
-        # Akcja / Potwierdzenie
-        if keys[ctrl['action_a']] or keys[pygame.K_RETURN]:
+        # --- ACTION / CONFIRMATION ---
+        if is_confirm:
             if s.active_col == 'fps':
+                # Update the FPS setting
                 s.launcher.performance_settings_data['decrease_launcher_fps_when_game_active'] = s.fps_levels[s.fps_index]
             else:
+                # Toggle the shutdown setting
                 current_val = s.launcher.performance_settings_data['turn_off_launcher_when_game_active']
                 s.launcher.performance_settings_data['turn_off_launcher_when_game_active'] = not current_val
             
+            # Save the updated data
             save_data(s.launcher.performance_settings_data, PERFORMANCE_SETTINGS_DATA_PATH)
 
     def draw(s, window):
@@ -594,15 +637,29 @@ class ThemesOptionsTab(GenericOptionsTab):
         if s.launcher.state_manager.ui_focus != 'content':
             return
 
-        keys = pygame.key.get_just_pressed()
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break 
 
-        if keys[ctrl['up']]:
+        if current_key is None:
+            return
+
+        # 2. Map current_key to logical navigation
+        is_up = current_key == ctrl['up']
+        is_down = current_key == ctrl['down']
+        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
+
+        # --- VERTICAL NAVIGATION ---
+        if is_up:
             s.selected_index = (s.selected_index - 1) % len(s.theme_names)
-        elif keys[ctrl['down']]:
+        elif is_down:
             s.selected_index = (s.selected_index + 1) % len(s.theme_names)
 
-        # Zmiana motywu
-        if keys[ctrl['action_a']] or keys[pygame.K_RETURN]:
+        # --- APPLY THEME ACTION ---
+        if is_confirm:
             new_theme = s.theme_names[s.selected_index]
             s.apply_theme(new_theme)
 

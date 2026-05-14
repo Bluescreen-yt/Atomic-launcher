@@ -45,25 +45,48 @@ class Sidebar:
     # INPUT
     # ===============================
 
-    def handle_input(self, keys):
+    def handle_input(self, events):
         if not self.options:
             return
 
-        if keys[self.launcher.controlls_data['keyboard']['down']]:
+        # 1. Capture the single KEYDOWN event from the queue
+        current_key = None
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                current_key = event.key
+                break 
+
+        if current_key is None:
+            return
+
+        # 2. Get the control map
+        ctrl = self.launcher.controlls_data['keyboard']
+        
+        # 3. Map current_key to logical navigation
+        is_up = current_key == ctrl['up']
+        is_down = current_key == ctrl['down']
+        is_right = current_key == ctrl['right']
+        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
+
+        # --- VERTICAL NAVIGATION ---
+        if is_down:
             self.index = (self.index + 1) % len(self.options)
 
-        elif keys[self.launcher.controlls_data['keyboard']['up']]:
+        elif is_up:
             self.index = (self.index - 1) % len(self.options)
 
-        elif keys[self.launcher.controlls_data['keyboard']['right']]:
+        # --- SWITCH TO CONTENT ---
+        elif is_right:
             self.launcher.state_manager.ui_focus = 'content'
 
-        elif keys[pygame.K_RETURN] or keys[self.launcher.controlls_data['keyboard']['action_a']]:
+        # --- SELECT / CONFIRM ---
+        elif is_confirm:
             self.launcher.state_manager.set_state(
                 self.options[self.index]
             )
             self.launcher.state_manager.ui_focus = 'content'
 
+            # Special case: Exit option (usually the last index)
             if self.index == len(self.options) - 1:
                 self.launcher.save()
                 pygame.quit()
