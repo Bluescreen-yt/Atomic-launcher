@@ -229,6 +229,7 @@ class Launcher:
             return
 
         for key in s.gpio_controller.get_pending_keys():
+            print(f"Posting queued GPIO key event: {key}")
             pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': key, 'mod': pygame.KMOD_NONE}))
 
     #METHOD FOR DRAWING THE LAUNCHER

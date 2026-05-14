@@ -20,7 +20,12 @@ class RaspberryPiGPIOController:
                     btn = Button(pin, pull_up=True, bounce_time=0.05)
                     key = keyboard_mapping.get(action)
                     if key is not None:
-                        btn.when_pressed = lambda k=key: s.pending_keys.put(k)
+                        def make_callback(k, act, p):
+                            def callback():
+                                print(f"GPIO button pressed: action={act}, pin={p}, key={k}")
+                                s.pending_keys.put(k)
+                            return callback
+                        btn.when_pressed = make_callback(key, action, pin)
                     s.buttons[action] = btn
                     s.prev_states[action] = False
                 except Exception as e:
