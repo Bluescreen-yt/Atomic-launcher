@@ -60,6 +60,7 @@ class Launcher:
         
         if s.is_pi and Button:
             s.setup_gpio()
+            print(f"System: {s.system}, Is Pi: {s.is_pi}")
 
         #SETTING UP THE DISPLAY
         s.setting_up_display()
@@ -281,6 +282,7 @@ class Launcher:
         while True:
 
             # 1. Check GPIO before standard event handling
+            print("Polling...")
             s.poll_gpio()
 
             #HANDILING EVENTS
