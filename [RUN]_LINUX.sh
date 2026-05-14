@@ -31,7 +31,7 @@ if ping -q -c 1 -W 1 8.8.8.8 >/dev/null; then
     if [ ! -d ".git" ]; then
         echo "Nie znaleziono repozytorium git w $(pwd)"
     else
-        git pull origin main
+        git pull origin pi-testing
     fi
 
     "$PIP" install --upgrade pip --quiet

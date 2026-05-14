@@ -18,6 +18,12 @@ from States.store import Store
 from States.options import Options
 from Store.game_preview import GamePreview
 
+#RASPBERRY PI GPIO CONTROLLER
+try:
+    from Tools.raspberry_pi_gpio import RaspberryPiGPIOController
+except ImportError:
+    RaspberryPiGPIOController = None
+
 
 #LAUNCHER CLASS
 class Launcher:
@@ -42,6 +48,12 @@ class Launcher:
 
         #LOADING IN LAUNCHER DATA
         s.loading_in_launcher_data()
+
+        #INITIALIZING GPIO CONTROLLER
+        if s.is_pi and RaspberryPiGPIOController is not None:
+            s.gpio_controller = RaspberryPiGPIOController(s.gpio_controlls_data, s.controlls_data['keyboard'])
+        else:
+            s.gpio_controller = None
 
         #SETTING UP THE DISPLAY
         s.setting_up_display()
