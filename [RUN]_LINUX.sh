@@ -29,10 +29,23 @@ else
     echo "Model file not found, assuming not Raspberry Pi."
 fi
 
-# Create venv if missing
+# Create venv if missing or recreate it for Raspberry Pi system site packages
+VENV_CFG=".venv/pyvenv.cfg"
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv .venv
+    if echo "$MODEL" | grep -q "Raspberry Pi"; then
+        python3 -m venv --system-site-packages .venv
+    else
+        python3 -m venv .venv
+    fi
+else
+    if echo "$MODEL" | grep -q "Raspberry Pi"; then
+        if ! grep -q "^include-system-site-packages = true" "$VENV_CFG" 2>/dev/null; then
+            echo "Recreating virtual environment with system site packages..."
+            rm -rf .venv
+            python3 -m venv --system-site-packages .venv
+        fi
+    fi
 fi
 
 # Use venv Python/Pip

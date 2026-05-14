@@ -3,4 +3,3 @@ pytmx
 gpiozero
 RPi.GPIO
 pigpio
-lgpio
