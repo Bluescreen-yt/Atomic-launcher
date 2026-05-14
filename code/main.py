@@ -4,6 +4,11 @@ from sys import exit
 from os import environ
 import platform
 import socket
+try:
+    import RPi.GPIO as GPIO
+except ImportError:
+    GPIO = None
+
 
 #IMPORTING FILES
 from settings import *
@@ -49,16 +54,10 @@ class Launcher:
         #LOADING IN LAUNCHER DATA
         s.loading_in_launcher_data()
 
-        #INITIALIZING GPIO CONTROLLER
-        if s.is_pi and RaspberryPiGPIOController is not None:
-            try:
-                s.gpio_controller = RaspberryPiGPIOController(s.gpio_controlls_data, s.controlls_data['keyboard'])
-                print("GPIO controller initialized.")
-            except Exception as e:
-                print(f"GPIO controller initialization failed: {e}")
-                s.gpio_controller = None
-        else:
-            s.gpio_controller = None
+        # --- GPIO INITIALIZATION ---
+        s.gpio_btn_states = {} # Tracks state to prevent event flooding
+        if s.is_pi and GPIO:
+            s.setup_gpio()
 
         #SETTING UP THE DISPLAY
         s.setting_up_display()
@@ -84,6 +83,40 @@ class Launcher:
         #GAME PROCESS
         s.game_process = None
         s.game_running = False
+
+    def setup_gpio(s):
+        """Initializes pins based on gpio_controlls_data."""
+        GPIO.setmode(GPIO.BCM)
+        for action, pin in s.gpio_controlls_data.items():
+            # Setting up as input with Pull-Up resistor (button connects to GND)
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+            s.gpio_btn_states[pin] = False # Initial state (not pressed)
+
+    def poll_gpio(s):
+        """Checks GPIO states and injects Pygame events."""
+        if not s.is_pi or not GPIO:
+            return
+
+        for action, pin in s.gpio_controlls_data.items():
+            # Buttons with Pull-Up resistors are 'False' (0) when pressed
+            is_pressed = not GPIO.input(pin) 
+            
+            # Check for State Change (Edge Detection)
+            if is_pressed and not s.gpio_btn_states[pin]:
+                # Button Pressed: Post a KEYDOWN event
+                key_to_simulate = s.controlls_data['keyboard'].get(action)
+                if key_to_simulate:
+                    new_event = pygame.event.Event(pygame.KEYDOWN, {'key': key_to_simulate})
+                    pygame.event.post(new_event)
+                s.gpio_btn_states[pin] = True
+
+            elif not is_pressed and s.gpio_btn_states[pin]:
+                # Button Released: Post a KEYUP event
+                key_to_simulate = s.controlls_data['keyboard'].get(action)
+                if key_to_simulate:
+                    new_event = pygame.event.Event(pygame.KEYUP, {'key': key_to_simulate})
+                    pygame.event.post(new_event)
+                s.gpio_btn_states[pin] = False
 
     #METHOD FOR CHECKING OPERATING SYSTEM
     def checking_operating_system(s):
@@ -156,7 +189,6 @@ class Launcher:
 
     #METHOD FOR HANDLING EVENTS
     def handling_events(s):
-        s.poll_gpio_events()
         events = pygame.event.get()
         for event in events:
 
@@ -222,15 +254,6 @@ class Launcher:
 
         # UPDATING CURRENT STATE
         s.state_manager.update(s.delta_time)
-
-    #METHOD FOR POLLING GPIO INPUTS
-    def poll_gpio_events(s):
-        if s.gpio_controller is None:
-            return
-
-        for key in s.gpio_controller.get_pending_keys():
-            print(f"Posting queued GPIO key event: {key}")
-            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, {'key': key, 'mod': pygame.KMOD_NONE}))
 
     #METHOD FOR DRAWING THE LAUNCHER
     def draw(s):
