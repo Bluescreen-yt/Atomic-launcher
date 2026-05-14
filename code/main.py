@@ -51,7 +51,12 @@ class Launcher:
 
         #INITIALIZING GPIO CONTROLLER
         if s.is_pi and RaspberryPiGPIOController is not None:
-            s.gpio_controller = RaspberryPiGPIOController(s.gpio_controlls_data, s.controlls_data['keyboard'])
+            try:
+                s.gpio_controller = RaspberryPiGPIOController(s.gpio_controlls_data, s.controlls_data['keyboard'])
+                print("GPIO controller initialized.")
+            except Exception as e:
+                print(f"GPIO controller initialization failed: {e}")
+                s.gpio_controller = None
         else:
             s.gpio_controller = None
 

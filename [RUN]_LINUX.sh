@@ -12,6 +12,14 @@ if ! command -v python3 &> /dev/null; then
 fi
 echo "Python is installed."
 
+# Check if Raspberry Pi and install GPIO backends if needed
+if [ -f /proc/device-tree/model ] && grep -q "Raspberry Pi" /proc/device-tree/model; then
+    echo "Raspberry Pi detected. Installing GPIO backends..."
+    sudo apt update --quiet
+    sudo apt install -y --quiet python3-rpi.gpio python3-pigpio python3-lgpio
+    echo "GPIO backends installed."
+fi
+
 # Create venv if missing
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."

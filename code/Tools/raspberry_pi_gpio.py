@@ -12,11 +12,15 @@ class RaspberryPiGPIOController:
         s.buttons = {}
         for action, pin in gpio_controlls_data.items():
             if pin is not None:
-                btn = Button(pin, pull_up=True, bounce_time=0.05)
-                key = keyboard_mapping.get(action)
-                if key is not None:
-                    btn.when_pressed = lambda k=key: s.post_key_event(k)
-                s.buttons[action] = btn
+                try:
+                    btn = Button(pin, pull_up=True, bounce_time=0.05)
+                    key = keyboard_mapping.get(action)
+                    if key is not None:
+                        btn.when_pressed = lambda k=key: s.post_key_event(k)
+                    s.buttons[action] = btn
+                except Exception as e:
+                    print(f"Failed to initialize GPIO button for {action} on pin {pin}: {e}")
+                    s.buttons[action] = None
 
     #POSTING THE KEY EVENT
     def post_key_event(s, key):
@@ -26,6 +30,6 @@ class RaspberryPiGPIOController:
 
     #CHECKING IF A BUTTON IS PRESSED (FOR POLLING IF NEEDED)
     def is_pressed(s, action):
-        if action in s.buttons:
+        if action in s.buttons and s.buttons[action] is not None:
             return s.buttons[action].is_pressed
         return False
