@@ -254,11 +254,13 @@ class Library(BaseState):
         if not os.path.exists(full_path): return
 
         try:
-            subprocess.Popen(
+            self.launcher.game_process = subprocess.Popen(
                 [sys.executable, full_path],
                 cwd=game_path,
                 creationflags=subprocess.CREATE_NEW_CONSOLE if os.name == "nt" else 0
-            )
+            )            
+            self.launcher.game_running = True 
+            
         except Exception as e:
             print(f"Failed to start: {e}")
             return
@@ -267,5 +269,3 @@ class Library(BaseState):
         if perf_data.get('turn_off_launcher_when_game_active'):
             pygame.quit()
             sys.exit()
-        else:
-            self.fps = perf_data.get('decrease_launcher_fps_when_game_active', 30)
