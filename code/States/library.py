@@ -81,60 +81,62 @@ class Library(BaseState):
 
     def handling_events(s, events):
         controlls = s.launcher.controlls_data
-        keys = pygame.key.get_just_pressed()
+        
+        # --- NEW EVENT-BASED LOGIC ---
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                key = event.key
 
-        if s.navigation_tutorial.is_active():
-            s.navigation_tutorial.handle_input(keys)
-            return
+                if s.navigation_tutorial.is_active():
+                    # Note: You may need to update handle_input to accept a single key
+                    s.navigation_tutorial.handle_input(key) 
+                    return
 
-        # 1. SEARCHBAR INPUT (When virtual keyboard is open)
-        if s.searchbar.active:
-            s.searchbar.handle_events(events)
-            return
+                if s.searchbar.active:
+                    s.searchbar.handle_events(events)
+                    return
 
-        # 2. BOTTOMBAR NAVIGATION
-        if s.bottombar.visible:
-            s.bottombar.handling_events()
-            return
+                if s.bottombar.visible:
+                    s.bottombar.handling_events()
+                    return
 
-        if s.launcher.state_manager.ui_focus != 'content':
-            return
+                if s.launcher.state_manager.ui_focus != 'content':
+                    return
 
-        # 3. TOPBAR NAVIGATION (Searchbar & Toggle Button)
-        if s.topbar_focus:
-            # Update visual highlight for the button
-            s.fav_toggle.is_selected = (s.topbar_index == 1)
+                # 3. TOPBAR NAVIGATION
+                if s.topbar_focus:
+                    s.fav_toggle.is_selected = (s.topbar_index == 1)
 
-            if keys[controlls['keyboard']['down']]:
-                s.topbar_focus = False
-                s.fav_toggle.is_selected = False
-            
-            elif keys[controlls['keyboard']['left']] or keys[controlls['keyboard']['right']]:
-                s.topbar_index = 1 - s.topbar_index # Toggle between 0 and 1
-                
-            if keys[pygame.K_RETURN] or keys[controlls['keyboard']['action_a']]:
-                if s.topbar_index == 0:
-                    s.searchbar.open_keyboard()
-                else:
-                    s.fav_toggle.toggle()
-            return
+                    if key == controlls['keyboard']['down']:
+                        s.topbar_focus = False
+                        s.fav_toggle.is_selected = False
+                    
+                    elif key == controlls['keyboard']['left'] or key == controlls['keyboard']['right']:
+                        s.topbar_index = 1 - s.topbar_index
+                        
+                    if key == pygame.K_RETURN or key == controlls['keyboard']['action_a']:
+                        if s.topbar_index == 0:
+                            s.searchbar.open_keyboard()
+                        else:
+                            s.fav_toggle.toggle()
+                    return
 
-        # 4. CONTENT NAVIGATION (Game Icons)
-        if keys[controlls['keyboard']['action_b']] and len(s.game_library) != 0:
-            s.bottombar.open_bottombar()
-            return
+                # 4. CONTENT NAVIGATION
+                if key == controlls['keyboard']['action_b'] and len(s.game_library) != 0:
+                    s.bottombar.open_bottombar()
+                    return
 
-        if keys[controlls['keyboard']['left']]:
-            if s.selected_index == 0:
-                s.launcher.state_manager.ui_focus = "sidebar"
-            else:
-                s.selected_index -= 1
-        elif keys[controlls['keyboard']['right']]:
-            s.selected_index = min(len(s.filtered_games) - 1, s.selected_index + 1)
-        elif keys[pygame.K_RETURN] or keys[controlls['keyboard']['action_a']]:
-            s.launch_game()
-        elif keys[controlls['keyboard']['up']]:
-            s.topbar_focus = True
+                if key == controlls['keyboard']['left']:
+                    if s.selected_index == 0:
+                        s.launcher.state_manager.ui_focus = "sidebar"
+                    else:
+                        s.selected_index -= 1
+                elif key == controlls['keyboard']['right']:
+                    s.selected_index = min(len(s.filtered_games) - 1, s.selected_index + 1)
+                elif key == pygame.K_RETURN or key == controlls['keyboard']['action_a']:
+                    s.launch_game()
+                elif key == controlls['keyboard']['up']:
+                    s.topbar_focus = True
 
     def update(s, delta_time):
         super().update(delta_time)
