@@ -217,6 +217,7 @@ class Launcher:
 
             #USER BUTTON INPUT
             if event.type == pygame.KEYDOWN:
+                print(f"Event Loop detected key: {event.key}")
 
                 #CLOSING LAUNCHER IF 'ESCAPE' BUTTON PRESSED
                 if event.key == pygame.K_ESCAPE:
