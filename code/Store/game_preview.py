@@ -123,63 +123,57 @@ class GamePreview(BaseState):
         return surface
 
     def handling_events(s, events):
-        # If the state isn't visible or active, we could exit here, 
-        # but usually, this is called only when the state is active.
+        # 1. Get the control map once before the loop
+        ctrl = s.launcher.controlls_data['keyboard']
         
-        # 1. Capture the single KEYDOWN event
-        current_key = None
+        # 2. Iterate through ALL events to prevent dropping injected GPIO events
         for event in events:
             if event.type == pygame.KEYDOWN:
                 current_key = event.key
-                break 
+                
+                # 3. Map keys to logical actions
+                is_up = current_key == ctrl['up']
+                is_down = current_key == ctrl['down']
+                is_left = current_key == ctrl['left']
+                is_right = current_key == ctrl['right']
+                is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
+                is_back = current_key in [ctrl['action_b'], pygame.K_ESCAPE]
 
-        if current_key is None:
-            return
+                # --- FULLSCREEN MODE LOGIC ---
+                if s.is_fullscreen:
+                    # Exit fullscreen with Back, Escape, or Space
+                    if is_back or current_key == pygame.K_SPACE:
+                        s.is_fullscreen = False
+                    # Navigate screenshots while in fullscreen
+                    elif is_left:
+                        s.current_img_index = (s.current_img_index - 1) % len(s.screenshots)
+                    elif is_right:
+                        s.current_img_index = (s.current_img_index + 1) % len(s.screenshots)
+                    
+                    # Continue to the next event, bypassing standard preview logic
+                    continue
 
-        # 2. Get the control map
-        ctrl = s.launcher.controlls_data['keyboard']
-        
-        # 3. Map keys to logical actions
-        is_up = current_key == ctrl['up']
-        is_down = current_key == ctrl['down']
-        is_left = current_key == ctrl['left']
-        is_right = current_key == ctrl['right']
-        is_confirm = current_key in [ctrl['action_a'], pygame.K_RETURN]
-        is_back = current_key in [ctrl['action_b'], pygame.K_ESCAPE]
+                # --- STANDARD PREVIEW LOGIC ---
+                
+                # Vertical navigation (Actions list like "Play", "Uninstall", etc.)
+                if is_up:
+                    s.selection_index = (s.selection_index - 1) % len(s.actions)
+                elif is_down:
+                    s.selection_index = (s.selection_index + 1) % len(s.actions)
+                
+                # Horizontal navigation (Screenshot gallery)
+                elif is_left:
+                    s.current_img_index = (s.current_img_index - 1) % len(s.screenshots)
+                elif is_right:
+                    s.current_img_index = (s.current_img_index + 1) % len(s.screenshots)
 
-        # --- FULLSCREEN MODE LOGIC ---
-        if s.is_fullscreen:
-            # Exit fullscreen with Back, Escape, or Space
-            if is_back or current_key == pygame.K_SPACE:
-                s.is_fullscreen = False
-            # Navigate screenshots while in fullscreen
-            elif is_left:
-                s.current_img_index = (s.current_img_index - 1) % len(s.screenshots)
-            elif is_right:
-                s.current_img_index = (s.current_img_index + 1) % len(s.screenshots)
-            return
+                # Execution (Confirm action)
+                elif is_confirm:
+                    s.execute_action()
 
-        # --- STANDARD PREVIEW LOGIC ---
-        
-        # Vertical navigation (Actions list like "Play", "Uninstall", etc.)
-        if is_up:
-            s.selection_index = (s.selection_index - 1) % len(s.actions)
-        elif is_down:
-            s.selection_index = (s.selection_index + 1) % len(s.actions)
-        
-        # Horizontal navigation (Screenshot gallery)
-        if is_left:
-            s.current_img_index = (s.current_img_index - 1) % len(s.screenshots)
-        elif is_right:
-            s.current_img_index = (s.current_img_index + 1) % len(s.screenshots)
-
-        # Execution (Confirm action)
-        if is_confirm:
-            s.execute_action()
-
-        # Back to Store/Library
-        if is_back:
-            s.launcher.state_manager.set_state('Store')
+                # Back to Store/Library
+                elif is_back:
+                    s.launcher.state_manager.set_state('Store')
 
     def execute_action(s):
         action_label = s.actions[s.selection_index]
