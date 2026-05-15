@@ -28,8 +28,8 @@ class FeatureFrame:
         s.icon_cache = {}
         s.feature_reasons = {}
         s.scaled_screenshot_cache = {}
-        s.title_font = pygame.font.SysFont(None, 48, bold=True)
-        s.body_font = pygame.font.SysFont(None, 30)
+        s.title_font = pygame.font.SysFont(None, 80, bold=True)
+        s.body_font = pygame.font.SysFont(None, 40)
         s.arrow_font = pygame.font.SysFont(None, 42, bold=True)
         s.label_font = pygame.font.SysFont(None, 28, bold=True)
         s.load_all_screenshots()
@@ -230,13 +230,13 @@ class FeatureFrame:
         
         # Title with enhanced styling
         title_surf = s.title_font.render(game_data.get('name', 'Unknown Game'), True, theme['colour_2'])
-        window.blit(title_surf, (text_x, icon_y + 5))
+        window.blit(title_surf, (text_x, icon_y + 20))
 
         # Reason text with better styling
         reason = s._get_reason_text(game_id)
         if reason:
             wrapped_reason = s._wrap_text(reason, s.body_font, text_max_width, max_lines=3)
-            y = icon_y + 60
+            y = icon_y + title_surf.get_height() + 20
             text_color = (240, 240, 240)
             for line in wrapped_reason:
                 line_surf = s.body_font.render(line, True, text_color)

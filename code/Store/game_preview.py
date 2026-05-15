@@ -8,7 +8,7 @@ import urllib.request
 import json
 import stat
 from os import listdir
-from os.path import join, isdir
+from os.path import join, isdir, isfile
 
 from States.generic_state import BaseState
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, BASE_DIR, GAMES_DIR, get_contrast_text_color
@@ -32,7 +32,10 @@ class GamePreview(BaseState):
         s.current_img_index = 0
         s.is_fullscreen = False
         s.selection_index = 0
-        s.actions = [] 
+        s.actions = []
+        s.title_font_path = None
+        s.author_font_path = None
+        s.description_font_path = None
 
     def setup(s, game_id, game_data):
         s.game_id = game_id
@@ -42,6 +45,9 @@ class GamePreview(BaseState):
         s.selection_index = 0
         s.check_status()
         s.load_screenshots()
+        s.title_font_path = s._get_custom_font_path('title')
+        s.author_font_path = s._get_custom_font_path('author')
+        s.description_font_path = s._get_custom_font_path('description')
         if s.launcher.checking_internet_connection():
             threading.Thread(target=s.fetch_size, daemon=True).start()
 
@@ -107,6 +113,33 @@ class GamePreview(BaseState):
             placeholder.fill((30, 30, 30))
             s.screenshots.append(placeholder)
             s.fullscreen_screenshots.append(s._scale_image(placeholder, fs_w, fs_h))
+
+    def _get_custom_font_path(s, font_type):
+        font_dir = join(BASE_DIR, 'assets', 'store_assets', s.game_id, 'fonts')
+        if not isdir(font_dir):
+            return None
+
+        candidates = []
+        if font_type == 'title':
+            candidates = ['title.ttf', 'title_font.ttf', 'custom_title.ttf', 'custom_title_font.ttf']
+        elif font_type == 'author':
+            candidates = ['author.ttf', 'author_font.ttf', 'custom_author.ttf', 'custom_author_font.ttf']
+        elif font_type == 'description':
+            candidates = ['description.ttf', 'description_font.ttf', 'custom_description.ttf', 'custom_description_font.ttf']
+
+        for filename in candidates:
+            font_path = join(font_dir, filename)
+            if isfile(font_path):
+                return font_path
+        return None
+
+    def _load_font(s, font_path, size, bold=False):
+        if font_path and isfile(font_path):
+            try:
+                return pygame.font.Font(font_path, size)
+            except Exception:
+                pass
+        return pygame.font.SysFont(None, size, bold=bold)
 
     def _scale_image(s, img, target_w, target_h):
         img_w, img_h = img.get_size()
@@ -296,12 +329,12 @@ class GamePreview(BaseState):
 
         # 1. HEADER
         # Title uses Primary Accent (colour_2) for hierarchy
-        title_font = pygame.font.SysFont(None, 70, bold=True)
+        title_font = s._load_font(s.title_font_path, 70, bold=True)
         title_surf = title_font.render(s.data.get('name', 'Game'), True, theme['colour_2'])
         window.blit(title_surf, (x_start, 30))
         
         # Meta Info uses Secondary Accent (colour_3)
-        meta_font = pygame.font.SysFont(None, 32)
+        meta_font = s._load_font(s.author_font_path, 32, bold=True)
         meta_text = f"AUTHOR: {s.data.get('author')}"
         meta_surf = meta_font.render(meta_text, True, theme['colour_3'])
         window.blit(meta_surf, (x_start, 90))
@@ -340,7 +373,7 @@ class GamePreview(BaseState):
             window.blit(surf, (menu_x, data_y + i * 45))
 
         # 4. DESCRIPTION
-        desc_font = pygame.font.SysFont(None, 44)
+        desc_font = s._load_font(s.description_font_path, 44)
         desc_rect = pygame.Rect(x_start, panel_y + screenshot_h + 60, screenshot_w, 100)
         # Description text uses high-contrast colour_4 or standard white
         s.draw_wrapped_text(window, s.data.get('description', ''), desc_font, (240, 240, 240), desc_rect)

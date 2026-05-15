@@ -52,10 +52,10 @@ class SearchBar:
         # 2) Visual Indication of focus
         if self.active:
             border_color = theme['colour_3'] # Active typing color
-            thickness = 4
+            thickness = 8
         elif focused:
             border_color = (255, 255, 255) # Hovered color (White or highlight)
-            thickness = 4
+            thickness = 8
         else:
             border_color = theme['colour_4'] # Default color
             thickness = 2

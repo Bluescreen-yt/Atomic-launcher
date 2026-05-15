@@ -42,11 +42,10 @@ class StoreEntry(pygame.sprite.Sprite):
 
         # ---------- FONTS ----------
         # Adjusted for 1280x720 screen space hierarchy
-        self.title_font = pygame.font.SysFont(None, 32, bold=True)
-        self.meta_font = pygame.font.SysFont(None, 18, italic=True)
-        self.desc_font = pygame.font.SysFont(None, 26)
-        self.tag_font = pygame.font.SysFont(None, 24)
-        self.badge_font = pygame.font.SysFont(None, 16, bold=True)
+        self.title_font = pygame.font.SysFont(None, 50, bold=True)
+        self.desc_font = pygame.font.SysFont(None, 32)
+        self.tag_font = pygame.font.SysFont(None, 26)
+        self.badge_font = pygame.font.SysFont(None, 18, bold=True)
 
     # =========================
     def _layout(self):
@@ -87,12 +86,6 @@ class StoreEntry(pygame.sprite.Sprite):
         title = self.title_font.render(title_text, True, theme['colour_2'])
         surface.blit(title, (self.text_x, y))
         y += title.get_height() + 2
-
-        # Meta & Description: Use colour_3 or white for readability
-        meta = f"v{self.game_data.get('version', '1.0.0')}"
-        meta_surf = self.meta_font.render(meta, True, theme['colour_3'])
-        surface.blit(meta_surf, (self.text_x, y))
-        y += meta_surf.get_height() + 10
 
         # Main description text should be very readable (White or soft grey)
         desc_color = (230, 230, 230) 
