@@ -29,6 +29,7 @@ class Library(BaseState):
         # LOGIC ATTRIBUTES
         s.game_library = []
         s.game_icons = {}
+        s.title_fonts = {}
         s.filtered_games = []
         s.selected_index = 0
         s.show_favorites_only = False
@@ -250,6 +251,19 @@ class Library(BaseState):
             new_h = max(1, int(raw_h * heart_scale))
             s.fav_heart_image = pygame.transform.smoothscale(raw_on, (new_w, new_h))
 
+    def _load_game_title_font(s, game_id):
+        font_dir = os.path.join(BASE_DIR, 'assets', 'store_assets', game_id, 'fonts')
+        if os.path.isdir(font_dir):
+            candidates = ['title.ttf', 'title_font.ttf', 'custom_title.ttf', 'custom_title_font.ttf']
+            for filename in candidates:
+                font_path = os.path.join(font_dir, filename)
+                if os.path.isfile(font_path):
+                    try:
+                        return pygame.font.Font(font_path, int(WINDOW_WIDTH * 0.05))
+                    except Exception as e:
+                        print(f"Failed to load custom font for {game_id}: {e}")
+        return None
+
     def toggle_favorites_filter(s):
         """Callback for the fav_toggle button."""
         s.show_favorites_only = s.fav_toggle.is_on
@@ -464,7 +478,12 @@ class Library(BaseState):
 
             if i == s.selected_index:
                 display_name = s.get_game_display_name(folder_name)
-                text = s.icon_font.render(display_name.upper(), True, theme['colour_3'])
+                
+                # Fetch custom font, fallback to default icon_font if None
+                font_to_use = s.title_fonts.get(folder_name) or s.icon_font
+                
+                # Render using our chosen font
+                text = font_to_use.render(display_name.upper(), True, theme['colour_3'])
                 text_rect = text.get_rect(center=(x, y - s.icon_w // 2 - 60))
                 window.blit(text, text_rect)
 
@@ -494,6 +513,7 @@ class Library(BaseState):
                 size=s.icon_w,
                 path=os.path.join(BASE_DIR, 'assets', 'store_assets', game, 'icon')
             )
+            s.title_fonts[game] = s._load_game_title_font(game)
         s.apply_search_filter(s.searchbar.text)
 
     def apply_search_filter(s, query):
