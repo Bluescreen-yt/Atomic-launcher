@@ -322,10 +322,9 @@ class ImageToggleButton:
             s.image = s.idle_img
 
     def draw(s, window):
-        # 1. Rysujemy bazowy obrazek przycisku
+        # Draw the button image (no selection outline)
         window.blit(s.image, s.rect)
-        
-        # 2. Nakładamy tekst na wierzch (wyśrodkowany względem przycisku)
-        # Używamy s.rect.topleft jako punktu odniesienia, by tekst był zawsze w środku obrazka
+
+        # Draw text on top (centered inside the image)
         text_pos = (s.rect.x + s.text_rect.x, s.rect.y + s.text_rect.y)
         window.blit(s.text_surf, text_pos)

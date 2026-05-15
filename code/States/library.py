@@ -1,5 +1,6 @@
 # IMPORTING LIBRARIES
 import pygame
+import math
 import os
 import subprocess
 import sys
@@ -10,7 +11,7 @@ from settings import GAMES_DIR, BASE_DIR, WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIB
 from UI.searchbar import SearchBar
 from UI.game_icon import GameIcon
 from UI.library_ui.bottombar import BottomBar
-from UI.buttons import GenericToggleButton
+from UI.buttons import GenericToggleButton, ImageToggleButton
 from UI.library_ui.navigation_tutorial import NavigationTutorial
 
 # IMPORTING TOOLS
@@ -31,8 +32,9 @@ class Library(BaseState):
         s.filtered_games = []
         s.selected_index = 0
         s.show_favorites_only = False
+        s.control_filter = 'all'  # one of 'all', 'keyboard', 'mouse'
         s.topbar_focus = False 
-        s.topbar_index = 0  # 0 = Searchbar, 1 = Favorites Button
+        s.topbar_index = 0  # 0 = Searchbar, 1 = Favorites Button, 2 = Keyboard Filter, 3 = Mouse Filter
         s.navigation_tutorial = NavigationTutorial(launcher)
 
         # LIBRARY UI ELEMENTS
@@ -46,26 +48,190 @@ class Library(BaseState):
             x=int(WINDOW_WIDTH * 0.5) - int((WINDOW_WIDTH * 0.4) // 2)
         )
 
-        # FAVORITES TOGGLE BUTTON
+        # FAVORITES + CONTROL FILTER BUTTONS
         btn_w = int(WINDOW_WIDTH * 0.10)
         # Positioned to the right of the searchbar
-        btn_x = s.searchbar.custom_x + s.searchbar.w + 200
+        btn_x = s.searchbar.custom_x + s.searchbar.w + 150
         btn_y = s.searchbar.custom_y + s.searchbar.h // 2
+        btn_h = int(s.searchbar.h // 2)
 
-        s.fav_toggle = GenericToggleButton(
-            launcher,
-            size=(btn_w, s.searchbar.h/2),
-            pos=(btn_x, btn_y),
-            text="Favorites",
-            text_size=30,
-            active_colour=(0,255,0),  # Fallback colors (not used when theme is enabled)
-            inactive_colour=(255,0,0),
-            action=s.toggle_favorites_filter
-        )
-        s.fav_toggle.set_theme_colours(use_theme=True)
+        def scale_icon(raw_img):
+            raw_w, raw_h = raw_img.get_size()
+            scale = min(btn_w / raw_w, btn_h / raw_h)
+            return pygame.transform.smoothscale(raw_img, (max(1, int(raw_w * scale)), max(1, int(raw_h * scale))))
+
+        def make_icon_images(raw_img):
+            idle = scale_icon(raw_img)
+            hover = idle.copy()
+            active = idle.copy()
+            tint = pygame.Surface(idle.get_size(), pygame.SRCALPHA)
+            tint.fill((255, 255, 255, 100))
+            active.blit(tint, (0, 0), special_flags=pygame.BLEND_RGBA_ADD)
+            return idle, hover, active
+
+        # Load favorites and control filter icons
+        try:
+            off_img_path = os.path.join(BASE_DIR, 'assets', 'favorites_filter_off_icon.png')
+            on_img_path = os.path.join(BASE_DIR, 'assets', 'favorites_filter_on_icon.png')
+            highlight_img_path = os.path.join(BASE_DIR, 'assets', 'favorites_filter_highlight_icon.png')
+            keyboard_off_img_path = os.path.join(BASE_DIR, 'assets', 'keyboard_filter_off_icon.png')
+            keyboard_on_img_path = os.path.join(BASE_DIR, 'assets', 'keyboard_icon.png')
+            keyboard_highlight_img_path = os.path.join(BASE_DIR, 'assets', 'keyboard_filter_highlight_icon.png')
+            mouse_off_img_path = os.path.join(BASE_DIR, 'assets', 'mouse_filter_off_icon.png')
+            mouse_on_img_path = os.path.join(BASE_DIR, 'assets', 'mouse_icon.png')
+            mouse_highlight_img_path = os.path.join(BASE_DIR, 'assets', 'mouse_filter_highlight_icon.png')
+
+            raw_off = pygame.image.load(off_img_path).convert_alpha()
+            raw_on = pygame.image.load(on_img_path).convert_alpha()
+            raw_high = pygame.image.load(highlight_img_path).convert_alpha()
+            raw_keyboard_off = pygame.image.load(keyboard_off_img_path).convert_alpha()
+            raw_keyboard_on = pygame.image.load(keyboard_on_img_path).convert_alpha()
+            raw_keyboard_high = pygame.image.load(keyboard_highlight_img_path).convert_alpha()
+            raw_mouse_off = pygame.image.load(mouse_off_img_path).convert_alpha()
+            raw_mouse_on = pygame.image.load(mouse_on_img_path).convert_alpha()
+            raw_mouse_high = pygame.image.load(mouse_highlight_img_path).convert_alpha()
+        except Exception:
+            raw_off = None
+            raw_on = None
+            raw_high = None
+            raw_keyboard_off = None
+            raw_keyboard_on = None
+            raw_keyboard_high = None
+            raw_mouse_off = None
+            raw_mouse_on = None
+            raw_mouse_high = None
+
+        if raw_off and raw_on:
+            off_img = scale_icon(raw_off)
+            hover_img = off_img.copy()
+            active_img = scale_icon(raw_on)
+
+            s.fav_toggle = ImageToggleButton(
+                launcher,
+                pos=(btn_x, btn_y),
+                idle_img=off_img,
+                hover_img=hover_img,
+                active_img=active_img,
+                text="",
+                text_size=30,
+                action=s.toggle_favorites_filter
+            )
+
+            if raw_high:
+                highlight_max_w = int(max(off_img.get_width(), active_img.get_width()) * 1.3)
+                highlight_max_h = int(max(off_img.get_height(), active_img.get_height()) * 1.3)
+                rh_w, rh_h = raw_high.get_size()
+                high_scale = min(highlight_max_w / rh_w, highlight_max_h / rh_h)
+                h_w = max(1, int(rh_w * high_scale))
+                h_h = max(1, int(rh_h * high_scale))
+                s.fav_highlight_image = pygame.transform.smoothscale(raw_high, (h_w, h_h))
+            else:
+                s.fav_highlight_image = None
+        else:
+            s.fav_toggle = GenericToggleButton(
+                launcher,
+                size=(btn_w, btn_h),
+                pos=(btn_x, btn_y),
+                text="Favorites",
+                text_size=30,
+                active_colour=(0,255,0),
+                inactive_colour=(255,0,0),
+                action=s.toggle_favorites_filter
+            )
+            s.fav_toggle.set_theme_colours(use_theme=True)
+            s.fav_highlight_image = None
+
+        key_btn_x = btn_x + btn_w -50
+        mouse_btn_x = key_btn_x + btn_w - 50
+
+        if raw_keyboard_off and raw_keyboard_on and raw_mouse_off and raw_mouse_on:
+            kb_idle = scale_icon(raw_keyboard_off)
+            kb_hover = kb_idle.copy()
+            kb_active = scale_icon(raw_keyboard_on)
+            mouse_idle = scale_icon(raw_mouse_off)
+            mouse_hover = mouse_idle.copy()
+            mouse_active = scale_icon(raw_mouse_on)
+
+            s.keyboard_filter_toggle = ImageToggleButton(
+                launcher,
+                pos=(key_btn_x, btn_y),
+                idle_img=kb_idle,
+                hover_img=kb_hover,
+                active_img=kb_active,
+                text="",
+                text_size=30,
+                action=lambda: s.set_control_filter('keyboard')
+            )
+
+            s.mouse_filter_toggle = ImageToggleButton(
+                launcher,
+                pos=(mouse_btn_x, btn_y),
+                idle_img=mouse_idle,
+                hover_img=mouse_hover,
+                active_img=mouse_active,
+                text="",
+                text_size=30,
+                action=lambda: s.set_control_filter('mouse')
+            )
+
+            if raw_keyboard_high:
+                highlight_max_w = int(max(kb_idle.get_width(), kb_active.get_width()) * 1.3)
+                highlight_max_h = int(max(kb_idle.get_height(), kb_active.get_height()) * 1.3)
+                rh_w, rh_h = raw_keyboard_high.get_size()
+                high_scale = min(highlight_max_w / rh_w, highlight_max_h / rh_h)
+                h_w = max(1, int(rh_w * high_scale))
+                h_h = max(1, int(rh_h * high_scale))
+                s.keyboard_highlight_image = pygame.transform.smoothscale(raw_keyboard_high, (h_w, h_h))
+            else:
+                s.keyboard_highlight_image = None
+
+            if raw_mouse_high:
+                highlight_max_w = int(max(mouse_idle.get_width(), mouse_active.get_width()) * 1.3)
+                highlight_max_h = int(max(mouse_idle.get_height(), mouse_active.get_height()) * 1.3)
+                rh_w, rh_h = raw_mouse_high.get_size()
+                high_scale = min(highlight_max_w / rh_w, highlight_max_h / rh_h)
+                h_w = max(1, int(rh_w * high_scale))
+                h_h = max(1, int(rh_h * high_scale))
+                s.mouse_highlight_image = pygame.transform.smoothscale(raw_mouse_high, (h_w, h_h))
+            else:
+                s.mouse_highlight_image = None
+        else:
+            s.keyboard_filter_toggle = GenericToggleButton(
+                launcher,
+                size=(btn_w, btn_h),
+                pos=(key_btn_x, btn_y),
+                text="Keyboard",
+                text_size=24,
+                action=lambda: s.set_control_filter('keyboard')
+            )
+            s.keyboard_filter_toggle.set_theme_colours(use_theme=True)
+
+            s.mouse_filter_toggle = GenericToggleButton(
+                launcher,
+                size=(btn_w, btn_h),
+                pos=(mouse_btn_x, btn_y),
+                text="Mouse",
+                text_size=24,
+                action=lambda: s.set_control_filter('mouse')
+            )
+            s.mouse_filter_toggle.set_theme_colours(use_theme=True)
+            s.keyboard_highlight_image = None
+            s.mouse_highlight_image = None
+
+        # Small heart image placeholder (actual scaling done after layout attrs)
+        s.fav_heart_image = None
+
+        # Highlight animation timer
+        s.fav_highlight_timer = 0.0
 
         s.bottombar = BottomBar(launcher, s)
         s.icon_font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.05), bold=False)
+        s.label_font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.020), bold=False)
+        s.filter_label_progress = {
+            'favorites': 0.0,
+            'keyboard': 0.0,
+            'mouse': 0.0,
+        }
 
         # LAYOUT ATTRIBUTES
         s.icon_w = int(WINDOW_WIDTH * 0.2)
@@ -74,9 +240,35 @@ class Library(BaseState):
         s.current_scroll = 0
         s.icon_group = pygame.sprite.Group()
 
+        # Now that `s.icon_w` is known, prepare the heart image if available
+        if 'raw_on' in locals() and raw_on:
+            # Scale heart image to fit within a square of size (heart_max, heart_max) preserving aspect ratio
+            heart_max = int(s.icon_w * 0.2)
+            raw_w, raw_h = raw_on.get_size()
+            heart_scale = min(heart_max / raw_w, heart_max / raw_h)
+            new_w = max(1, int(raw_w * heart_scale))
+            new_h = max(1, int(raw_h * heart_scale))
+            s.fav_heart_image = pygame.transform.smoothscale(raw_on, (new_w, new_h))
+
     def toggle_favorites_filter(s):
         """Callback for the fav_toggle button."""
         s.show_favorites_only = s.fav_toggle.is_on
+        s.apply_search_filter(s.searchbar.text)
+
+    def set_control_filter(s, filter_name):
+        if filter_name == 'keyboard':
+            if s.keyboard_filter_toggle.is_on:
+                s.mouse_filter_toggle.is_on = False
+                s.control_filter = 'keyboard'
+            else:
+                s.control_filter = 'all'
+        elif filter_name == 'mouse':
+            if s.mouse_filter_toggle.is_on:
+                s.keyboard_filter_toggle.is_on = False
+                s.control_filter = 'mouse'
+            else:
+                s.control_filter = 'all'
+
         s.apply_search_filter(s.searchbar.text)
 
     def handling_events(s, events):
@@ -105,19 +297,27 @@ class Library(BaseState):
                 # 3. TOPBAR NAVIGATION
                 if s.topbar_focus:
                     s.fav_toggle.is_selected = (s.topbar_index == 1)
+                    s.keyboard_filter_toggle.is_selected = (s.topbar_index == 2)
+                    s.mouse_filter_toggle.is_selected = (s.topbar_index == 3)
 
                     if key == controlls['keyboard']['down']:
                         s.topbar_focus = False
                         s.fav_toggle.is_selected = False
-                    
-                    elif key == controlls['keyboard']['left'] or key == controlls['keyboard']['right']:
-                        s.topbar_index = 1 - s.topbar_index
-                        
+                        s.keyboard_filter_toggle.is_selected = False
+                        s.mouse_filter_toggle.is_selected = False
+                    elif key == controlls['keyboard']['left']:
+                        s.topbar_index = (s.topbar_index - 1) % 4
+                    elif key == controlls['keyboard']['right']:
+                        s.topbar_index = (s.topbar_index + 1) % 4
                     if key == pygame.K_RETURN or key == controlls['keyboard']['action_a']:
                         if s.topbar_index == 0:
                             s.searchbar.open_keyboard()
-                        else:
+                        elif s.topbar_index == 1:
                             s.fav_toggle.toggle()
+                        elif s.topbar_index == 2:
+                            s.keyboard_filter_toggle.toggle()
+                        elif s.topbar_index == 3:
+                            s.mouse_filter_toggle.toggle()
                     return
 
                 # 4. CONTENT NAVIGATION
@@ -140,8 +340,27 @@ class Library(BaseState):
     def update(s, delta_time):
         super().update(delta_time)
         s.current_scroll += (s.selected_index - s.current_scroll) * s.scroll_speed * delta_time
+
+        try:
+            s.fav_toggle.is_selected = (s.topbar_focus and s.topbar_index == 1)
+            s.keyboard_filter_toggle.is_selected = (s.topbar_focus and s.topbar_index == 2)
+            s.mouse_filter_toggle.is_selected = (s.topbar_focus and s.topbar_index == 3)
+        except Exception:
+            pass
+
         s.fav_toggle.update(delta_time)
+        s.keyboard_filter_toggle.update(delta_time)
+        s.mouse_filter_toggle.update(delta_time)
+
+        for key, toggle in [('favorites', s.fav_toggle), ('keyboard', s.keyboard_filter_toggle), ('mouse', s.mouse_filter_toggle)]:
+            target = 1.0 if toggle.is_on else 0.0
+            progress = s.filter_label_progress[key]
+            progress += (target - progress) * min(10.0, 12.0 * delta_time)
+            s.filter_label_progress[key] = 0.0 if abs(progress) < 0.01 else progress
+
         s.navigation_tutorial.update(delta_time)
+        # Update highlight timer for pulsing effect
+        s.fav_highlight_timer += delta_time
 
     def draw(s, window):
         theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
@@ -154,8 +373,55 @@ class Library(BaseState):
         search_focused = (s.topbar_focus and s.topbar_index == 0)
         s.searchbar.draw(window, focused=search_focused)
 
-        # Draw the Favorites Toggle Button
+        # Draw pulsing highlight behind the favorites or control filter toggles when selected
+        freq = 2.0
+        alpha = int((0.5 + 0.5 * math.sin(2 * math.pi * freq * s.fav_highlight_timer)) * (220 - 80) + 80)
+
+        if getattr(s.fav_toggle, 'is_selected', False) and getattr(s, 'fav_highlight_image', None):
+            hi = s.fav_highlight_image.copy()
+            hi.set_alpha(alpha)
+            rect = hi.get_rect(center=s.fav_toggle.rect.center)
+            window.blit(hi, rect)
+
+        if getattr(s.keyboard_filter_toggle, 'is_selected', False) and getattr(s, 'keyboard_highlight_image', None):
+            hi = s.keyboard_highlight_image.copy()
+            hi.set_alpha(alpha)
+            rect = hi.get_rect(center=s.keyboard_filter_toggle.rect.center)
+            window.blit(hi, rect)
+
+        if getattr(s.mouse_filter_toggle, 'is_selected', False) and getattr(s, 'mouse_highlight_image', None):
+            hi = s.mouse_highlight_image.copy()
+            hi.set_alpha(alpha)
+            rect = hi.get_rect(center=s.mouse_filter_toggle.rect.center)
+            window.blit(hi, rect)
+
+        # Draw the Favorites and control filter buttons
         s.fav_toggle.draw(window)
+        s.keyboard_filter_toggle.draw(window)
+        s.mouse_filter_toggle.draw(window)
+
+        # Draw slide-out labels under active toggles
+        for label_text, button, key in [
+            ("Favorites", s.fav_toggle, 'favorites'),
+            ("Keyboard", s.keyboard_filter_toggle, 'keyboard'),
+            ("Mouse", s.mouse_filter_toggle, 'mouse'),
+        ]:
+            progress = s.filter_label_progress[key]
+            if progress > 0.01:
+                text_surf = s.label_font.render(label_text, True, theme['colour_3'])
+                text_width, text_height = text_surf.get_size()
+                x = button.rect.centerx - text_width // 2
+                y = button.rect.bottom + int((1.0 - progress) * 16) + 8
+                alpha = int(progress * 255)
+
+                bg = pygame.Surface((text_width + 12, text_height + 8), pygame.SRCALPHA)
+                bg.fill((0, 0, 0, 120))
+                bg.set_alpha(alpha)
+                window.blit(bg, (x - 6, y - 4))
+
+                label_image = text_surf.copy()
+                label_image.set_alpha(alpha)
+                window.blit(label_image, (x, y))
 
         s.navigation_tutorial.draw(window)
 
@@ -187,10 +453,14 @@ class Library(BaseState):
             icon.draw(window)
 
             if folder_name in favorites:
-                heart = s.icon_font.render("<3", True, (255, 60, 60)) 
-                heart_rect = heart.get_rect(topright=(x + s.icon_w // 2 - 10, y - s.icon_w // 2 + 10))
-                pygame.draw.rect(window, (30, 30, 30), heart_rect.inflate(4, 4), border_radius=4)
-                window.blit(heart, heart_rect)
+                if getattr(s, 'fav_heart_image', None):
+                    heart_img = s.fav_heart_image
+                    heart_rect = heart_img.get_rect(topright=(x + s.icon_w // 2 - 10, y - s.icon_w // 2 + 10))
+                    window.blit(heart_img, heart_rect)
+                else:
+                    heart = s.icon_font.render("<3", True, (255, 60, 60)) 
+                    heart_rect = heart.get_rect(topright=(x + s.icon_w // 2 - 10, y - s.icon_w // 2 + 10))
+                    window.blit(heart, heart_rect)
 
             if i == s.selected_index:
                 display_name = s.get_game_display_name(folder_name)
@@ -233,6 +503,13 @@ class Library(BaseState):
         
         for game_name in s.game_library:
             if s.show_favorites_only and game_name not in favorites:
+                continue
+
+            game_data = s.manifest.get(game_name, {})
+            controls = game_data.get('controls', '').lower()
+            if s.control_filter == 'keyboard' and controls != 'keyboard':
+                continue
+            if s.control_filter == 'mouse' and controls != 'mouse':
                 continue
                 
             display_name = s.get_game_display_name(game_name)

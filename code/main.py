@@ -235,7 +235,6 @@ class Launcher:
 
         print(f"FPS: {s.clock.get_fps():.2f}", end='\r')
 
-
         #UPDATING CURRENT STATE
         s.state_manager.update(s.delta_time)
 
