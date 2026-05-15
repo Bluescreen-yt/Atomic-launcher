@@ -7,6 +7,7 @@ from UI.store_ui.store_entry import StoreEntry, GameStatus
 from UI.store_ui.feature_frame import FeatureFrame
 from UI.searchbar import SearchBar
 from UI.store_ui.progress_bar import Bar
+from UI.buttons import GenericToggleButton, ImageToggleButton
 from States.generic_state import BaseState
 from Tools.data_loading_tools import load_data
 from Tools.asset_importing_tool import import_image
@@ -23,12 +24,19 @@ class Store(BaseState):
         # SEARCHBAR
         # SearchBar now handles internal keyboard logic and typing state[cite: 16]
         s.search_query = ""
+        s.control_filter = 'all'  # one of 'all', 'keyboard', 'mouse'
+        s.filter_focus_index = 0  # 0 = keyboard, 1 = mouse, 2 = searchbar
         s.searchbar = SearchBar(
             launcher,
             on_change = s.on_search_change,
             width = 500,
-            height = 60
+            height = 60,
+            x = WINDOW_WIDTH - 700,
+            y = 10
         )
+
+        s.keyboard_filter_toggle = None
+        s.mouse_filter_toggle = None
 
         # CATEGORY TABS
         s.tabs = ["All", "Arcade", "Adventure & RPG", "Cozy", "Horror"]
@@ -58,7 +66,7 @@ class Store(BaseState):
         s.selected_index = 0
         s.scroll = 0
         s.target_scroll = 0 
-        s.focus_order = ["searchbar", "featured", "tabs", "content", "download"]
+        s.focus_order = ["searchbar", "filters", "featured", "tabs", "content", "download"]
         s.icon_cache = {}
         s.text_font = pygame.font.SysFont(None, 28)
         s.small_font = pygame.font.SysFont(None, 20)
@@ -71,6 +79,7 @@ class Store(BaseState):
         s.feature_frame_height = 520
         s.feature_frame = FeatureFrame(launcher, s.manifest)
 
+        s._init_control_filters(launcher)
         s.was_downloading = False
 
     def update_statuses(s):
@@ -152,6 +161,148 @@ class Store(BaseState):
             s.icon_cache[cache_key] = None
             return None
 
+    def _init_control_filters(s, launcher):
+        btn_w = int(WINDOW_WIDTH * 0.07)
+        btn_h = int(40)
+        btn_gap = 14
+        base_x = s.searchbar.custom_x - (btn_w * 2 + btn_gap)
+        btn_y = s.searchbar.custom_y + s.searchbar.h // 2
+
+        def scale_icon(raw_img):
+            raw_w, raw_h = raw_img.get_size()
+            scale = min(btn_w / raw_w, btn_h / raw_h)
+            return pygame.transform.smoothscale(raw_img, (max(1, int(raw_w * scale)), max(1, int(raw_h * scale))))
+
+        try:
+            kb_off = pygame.image.load(join(BASE_DIR, 'assets', 'keyboard_filter_off_icon.png')).convert_alpha()
+            kb_on = pygame.image.load(join(BASE_DIR, 'assets', 'keyboard_icon.png')).convert_alpha()
+            kb_high = pygame.image.load(join(BASE_DIR, 'assets', 'keyboard_filter_highlight_icon.png')).convert_alpha()
+            mouse_off = pygame.image.load(join(BASE_DIR, 'assets', 'mouse_filter_off_icon.png')).convert_alpha()
+            mouse_on = pygame.image.load(join(BASE_DIR, 'assets', 'mouse_icon.png')).convert_alpha()
+            mouse_high = pygame.image.load(join(BASE_DIR, 'assets', 'mouse_filter_highlight_icon.png')).convert_alpha()
+        except Exception:
+            kb_off = kb_on = kb_high = mouse_off = mouse_on = mouse_high = None
+
+        if kb_off and kb_on:
+            kb_idle = scale_icon(kb_off)
+            kb_hover = kb_idle.copy()
+            kb_active = scale_icon(kb_on)
+            kb_highlight = None
+            if kb_high:
+                highlight_max_w = int(max(kb_idle.get_width(), kb_active.get_width()) * 1.3)
+                highlight_max_h = int(max(kb_idle.get_height(), kb_active.get_height()) * 1.3)
+                rh_w, rh_h = kb_high.get_size()
+                high_scale = min(highlight_max_w / rh_w, highlight_max_h / rh_h)
+                h_w = max(1, int(rh_w * high_scale))
+                h_h = max(1, int(rh_h * high_scale))
+                kb_highlight = pygame.transform.smoothscale(kb_high, (h_w, h_h))
+
+            s.keyboard_filter_toggle = ImageToggleButton(
+                launcher,
+                pos=(base_x + btn_w // 2, btn_y),
+                idle_img=kb_idle,
+                hover_img=kb_hover,
+                active_img=kb_active,
+                highlight_img=kb_highlight,
+                text="",
+                text_size=24,
+                action=lambda: s.set_control_filter('keyboard')
+            )
+        else:
+            s.keyboard_filter_toggle = GenericToggleButton(
+                launcher,
+                size=(btn_w, btn_h),
+                pos=(base_x + btn_w // 2, btn_y),
+                text="Keyboard",
+                text_size=18,
+                action=lambda: s.set_control_filter('keyboard')
+            )
+            s.keyboard_filter_toggle.set_theme_colours(use_theme=True)
+
+        if mouse_off and mouse_on:
+            mouse_idle = scale_icon(mouse_off)
+            mouse_hover = mouse_idle.copy()
+            mouse_active = scale_icon(mouse_on)
+            mouse_highlight = None
+            if mouse_high:
+                highlight_max_w = int(max(mouse_idle.get_width(), mouse_active.get_width()) * 1.3)
+                highlight_max_h = int(max(mouse_idle.get_height(), mouse_active.get_height()) * 1.3)
+                rh_w, rh_h = mouse_high.get_size()
+                high_scale = min(highlight_max_w / rh_w, highlight_max_h / rh_h)
+                h_w = max(1, int(rh_w * high_scale))
+                h_h = max(1, int(rh_h * high_scale))
+                mouse_highlight = pygame.transform.smoothscale(mouse_high, (h_w, h_h))
+
+            s.mouse_filter_toggle = ImageToggleButton(
+                launcher,
+                pos=(base_x + btn_w + btn_gap + btn_w // 2, btn_y),
+                idle_img=mouse_idle,
+                hover_img=mouse_hover,
+                active_img=mouse_active,
+                highlight_img=mouse_highlight,
+                text="",
+                text_size=24,
+                action=lambda: s.set_control_filter('mouse')
+            )
+        else:
+            s.mouse_filter_toggle = GenericToggleButton(
+                launcher,
+                size=(btn_w, btn_h),
+                pos=(base_x + btn_w + btn_gap + btn_w // 2, btn_y),
+                text="Mouse",
+                text_size=18,
+                action=lambda: s.set_control_filter('mouse')
+            )
+            s.mouse_filter_toggle.set_theme_colours(use_theme=True)
+
+        # Use the actual icon widths so the keyboard and mouse buttons sit closer together.
+        filter_gap = 8
+        if s.mouse_filter_toggle:
+            mouse_x = s.searchbar.custom_x - filter_gap - s.mouse_filter_toggle.rect.width // 2
+            s.mouse_filter_toggle.pos = (mouse_x, btn_y)
+            s.mouse_filter_toggle.rect = s.mouse_filter_toggle.image.get_rect(center=s.mouse_filter_toggle.pos)
+
+            if s.keyboard_filter_toggle:
+                kb_x = mouse_x - filter_gap - s.keyboard_filter_toggle.rect.width // 2
+                s.keyboard_filter_toggle.pos = (kb_x, btn_y)
+                s.keyboard_filter_toggle.rect = s.keyboard_filter_toggle.image.get_rect(center=s.keyboard_filter_toggle.pos)
+
+    def _update_filter_positions(s):
+        filter_gap = 40
+        btn_y = s.searchbar.custom_y + s.searchbar.h // 2
+
+        if s.mouse_filter_toggle:
+            mouse_x = s.searchbar.custom_x - filter_gap - s.mouse_filter_toggle.rect.width // 2
+            s.mouse_filter_toggle.pos = (mouse_x, btn_y)
+            if hasattr(s.mouse_filter_toggle, 'update_appearance'):
+                s.mouse_filter_toggle.update_appearance()
+            else:
+                s.mouse_filter_toggle.rect = s.mouse_filter_toggle.image.get_rect(center=s.mouse_filter_toggle.pos)
+
+        if s.keyboard_filter_toggle:
+            kb_x = s.searchbar.custom_x - filter_gap - s.mouse_filter_toggle.rect.width - filter_gap - s.keyboard_filter_toggle.rect.width // 2 if s.mouse_filter_toggle else s.searchbar.custom_x - filter_gap - s.keyboard_filter_toggle.rect.width // 2
+            if s.mouse_filter_toggle:
+                kb_x = s.mouse_filter_toggle.pos[0] - filter_gap - s.keyboard_filter_toggle.rect.width // 2
+            else:
+                kb_x = s.searchbar.custom_x - filter_gap - s.keyboard_filter_toggle.rect.width // 2
+            s.keyboard_filter_toggle.pos = (kb_x, btn_y)
+            if hasattr(s.keyboard_filter_toggle, 'update_appearance'):
+                s.keyboard_filter_toggle.update_appearance()
+            else:
+                s.keyboard_filter_toggle.rect = s.keyboard_filter_toggle.image.get_rect(center=s.keyboard_filter_toggle.pos)
+
+    def set_control_filter(s, filter_name):
+        if s.control_filter == filter_name:
+            s.control_filter = 'all'
+            s.keyboard_filter_toggle.is_on = False
+            s.mouse_filter_toggle.is_on = False
+        else:
+            s.control_filter = filter_name
+            s.keyboard_filter_toggle.is_on = (filter_name == 'keyboard')
+            s.mouse_filter_toggle.is_on = (filter_name == 'mouse')
+
+        s.apply_filters()
+
     def on_search_change(s, query):
         s.search_query = query
         s.apply_filters()
@@ -169,8 +320,13 @@ class Store(BaseState):
             data = s.manifest[game_id]
             name = data.get('name', '').lower()
             tags = data.get('tags', [])
+            controls = data.get('controls', '').lower()
 
             if query and query not in name:
+                continue
+            if s.control_filter == 'keyboard' and controls != 'keyboard':
+                continue
+            if s.control_filter == 'mouse' and controls != 'mouse':
                 continue
 
             if active_tab == "Arcade" and "arcade" not in tags:
@@ -268,18 +424,42 @@ class Store(BaseState):
                 # Check if download panel is physically visible
                 is_downloading_active = s.launcher.installer.is_downloading or s.launcher.installer.download_queue
 
-                # 1. SEARCHBAR FOCUS
-                if state_manager.ui_focus == "searchbar":
-                    if is_confirm:
-                        s.searchbar.open_keyboard()
-                    elif is_back:
-                        s.searchbar.active = False
-                        state_manager.ui_focus = "tabs"
-                    elif is_left and is_downloading_active:
-                        state_manager.ui_focus = "download"
-                    elif is_down:
-                        state_manager.ui_focus = "tabs"
-
+                # 1. SEARCHBAR / FILTERS FOCUS
+                if state_manager.ui_focus in ["searchbar", "filters"]:
+                    if state_manager.ui_focus == "searchbar":
+                        if is_confirm:
+                            s.searchbar.open_keyboard()
+                        elif is_back:
+                            s.searchbar.active = False
+                            state_manager.ui_focus = "tabs"
+                        elif is_left:
+                            if is_downloading_active:
+                                state_manager.ui_focus = "download"
+                            else:
+                                state_manager.ui_focus = "filters"
+                                s.filter_focus_index = 1
+                        elif is_up:
+                            state_manager.ui_focus = "filters"
+                            s.filter_focus_index = 1
+                        elif is_down:
+                            state_manager.ui_focus = "tabs"
+                    else:
+                        if is_left and s.filter_focus_index > 0:
+                            s.filter_focus_index -= 1
+                        elif is_right and s.filter_focus_index < 2:
+                            s.filter_focus_index += 1
+                        elif is_confirm:
+                            if s.filter_focus_index == 0 and s.keyboard_filter_toggle:
+                                s.keyboard_filter_toggle.toggle()
+                            elif s.filter_focus_index == 1 and s.mouse_filter_toggle:
+                                s.mouse_filter_toggle.toggle()
+                            elif s.filter_focus_index == 2:
+                                s.searchbar.open_keyboard()
+                                state_manager.ui_focus = "searchbar"
+                        elif is_back:
+                            state_manager.ui_focus = "tabs"
+                        elif is_down:
+                            state_manager.ui_focus = "tabs"
                 # 2. DOWNLOAD FOCUS
                 elif state_manager.ui_focus == "download":
                     if is_confirm and s.launcher.installer.is_downloading:
@@ -350,10 +530,28 @@ class Store(BaseState):
         s.handle_mouse_events(events)
 
     def handle_mouse_events(s, events):
+        state_manager = s.launcher.state_manager
+
         for event in events:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if hasattr(s, 'cancel_rect') and s.cancel_rect.collidepoint(event.pos):
                     s.launcher.installer.cancel_download()
+
+                if s.keyboard_filter_toggle:
+                    if s.keyboard_filter_toggle.rect.collidepoint(event.pos):
+                        state_manager.ui_focus = 'filters'
+                        s.filter_focus_index = 0
+                    s.keyboard_filter_toggle.handling_events([event])
+                if s.mouse_filter_toggle:
+                    if s.mouse_filter_toggle.rect.collidepoint(event.pos):
+                        state_manager.ui_focus = 'filters'
+                        s.filter_focus_index = 1
+                    s.mouse_filter_toggle.handling_events([event])
+
+                search_rect = pygame.Rect(s.searchbar.custom_x, s.searchbar.custom_y, s.searchbar.w, s.searchbar.h)
+                if search_rect.collidepoint(event.pos):
+                    s.searchbar.open_keyboard()
+                    state_manager.ui_focus = 'searchbar'
 
                 if s.selected_tab_index == 0:
                     clicked_nav = s.feature_frame.handle_mouse_event(event)
@@ -363,6 +561,12 @@ class Store(BaseState):
     def update(s, delta_time):
         super().update(delta_time)
         s.feature_frame.update(delta_time)
+
+        if s.keyboard_filter_toggle:
+            s.keyboard_filter_toggle.update(delta_time)
+        if s.mouse_filter_toggle:
+            s.mouse_filter_toggle.update(delta_time)
+
         if not s.online or not s.entries:
             return
 
@@ -515,7 +719,19 @@ class Store(BaseState):
         # ---------- SEARCH BAR (DRAWN LAST) ----------
         s.searchbar.custom_x = WINDOW_WIDTH - 600
         s.searchbar.custom_y = 10
-        search_focused = s.launcher.state_manager.ui_focus == "searchbar"
+        s._update_filter_positions()
+
+        if s.keyboard_filter_toggle:
+            s.keyboard_filter_toggle.is_selected = s.launcher.state_manager.ui_focus == 'filters' and s.filter_focus_index == 0
+        if s.mouse_filter_toggle:
+            s.mouse_filter_toggle.is_selected = s.launcher.state_manager.ui_focus == 'filters' and s.filter_focus_index == 1
+
+        if s.keyboard_filter_toggle:
+            s.keyboard_filter_toggle.draw(window)
+        if s.mouse_filter_toggle:
+            s.mouse_filter_toggle.draw(window)
+
+        search_focused = s.launcher.state_manager.ui_focus == "searchbar" or (s.launcher.state_manager.ui_focus == 'filters' and s.filter_focus_index == 2)
         s.searchbar.draw(window, focused=search_focused)
 
         super().draw(window)

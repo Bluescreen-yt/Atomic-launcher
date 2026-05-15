@@ -271,7 +271,7 @@ class GenericToggleButton:
             s.action()
 
 class ImageToggleButton:
-    def __init__(s, game, pos, idle_img, hover_img, active_img, text="", font_path=None, text_size=40, action=None):
+    def __init__(s, game, pos, idle_img, hover_img, active_img, highlight_img=None, text="", font_path=None, text_size=40, action=None):
         s.game = game
         s.pos = pos
         s.action = action
@@ -280,6 +280,7 @@ class ImageToggleButton:
         s.idle_img = idle_img
         s.hover_img = hover_img
         s.active_img = active_img
+        s.highlight_img = highlight_img
         
         s.is_on = False
         s.is_hovered = False
@@ -322,7 +323,10 @@ class ImageToggleButton:
             s.image = s.idle_img
 
     def draw(s, window):
-        # Draw the button image (no selection outline)
+        if s.is_selected and s.highlight_img:
+            hi_rect = s.highlight_img.get_rect(center=s.rect.center)
+            window.blit(s.highlight_img, hi_rect)
+
         window.blit(s.image, s.rect)
 
         # Draw text on top (centered inside the image)
