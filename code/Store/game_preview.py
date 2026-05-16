@@ -385,14 +385,15 @@ class GamePreview(BaseState):
             queued_surf = queued_font.render("QUEUED FOR DOWNLOAD", True, theme['colour_3'])
             window.blit(queued_surf, (x_start, 130))
 
-        title_font = s._load_font(s.title_font_path, 70, bold=True)
+        title_font = s._load_font(s.title_font_path, 85, bold=True)
         title_surf = title_font.render(s.data.get('name', 'Game'), True, theme['colour_2'])
         window.blit(title_surf, (x_start, 30))
         
         meta_font = s._load_font(s.author_font_path, 32, bold=True)
         meta_text = f"AUTHOR: {s.data.get('author')}"
         meta_surf = meta_font.render(meta_text, True, theme['colour_3'])
-        window.blit(meta_surf, (x_start, 90))
+        meta_rect = meta_surf.get_rect(bottomright=(screenshot_w + x_start, 130))
+        window.blit(meta_surf, meta_rect)
 
         # --- REVISED SCREENSHOT/VIDEO RENDERING ---
         panel_y = 140
