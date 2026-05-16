@@ -41,7 +41,7 @@ for %%f in ("%EMBEDDED_DIR%\python*._pth") do (
 )
 
 REM =============================================
-REM ENSURE PIP EXISTS (AUTOMATED EMBEDDED CHECK & INSTALL)
+REM ENSURE PIP EXISTS (BUILT-IN PYTHON BOOTSTRAP)
 REM =============================================
 
 echo Checking embedded pip...
@@ -49,29 +49,20 @@ echo Checking embedded pip...
 "%PYTHON%" -m pip --version >nul 2>nul
 
 if errorlevel 1 (
-    echo [INFO] Pip not found in embedded environment. Attempting install...
+    echo [INFO] Pip not found in embedded environment. Attempting native bootstrap...
     
-    REM Force PowerShell to use TLS 1.2 and download get-pip.py securely
-    powershell -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile '%EMBEDDED_DIR%\get-pip.py'"
+    REM Use Python's built-in module to generate pip cleanly 
+    REM without downloading external scripts
+    "%PYTHON%" -m ensurepip --default-pip --no-warn-script-location
     
-    if exist "%EMBEDDED_DIR%\get-pip.py" (
-        echo [INFO] Installing pip into embedded environment...
-        "%PYTHON%" "%EMBEDDED_DIR%\get-pip.py" --no-warn-script-location
-        del "%EMBEDDED_DIR%\get-pip.py"
-        
-        REM Double-check if the installation was successful
-        "%PYTHON%" -m pip --version >nul 2>nul
-        if errorlevel 1 (
-            echo [ERROR] Script failed to initialize pip inside the embedded environment.
-            pause
-            exit /b 1
-        )
-        echo [SUCCESS] Embedded pip installed successfully.
-    ) else (
-        echo [ERROR] Failed to download get-pip.py. Please check your firewall or internet connection.
+    REM Double-check if the native bootstrap worked
+    "%PYTHON%" -m pip --version >nul 2>nul
+    if errorlevel 1 (
+        echo [ERROR] Native ensurepip failed. The embedded Python runtime may be missing critical DLLs.
         pause
         exit /b 1
     )
+    echo [SUCCESS] Embedded pip initiated successfully.
 )
 
 REM =============================================
