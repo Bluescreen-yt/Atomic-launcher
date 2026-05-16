@@ -1,16 +1,1 @@
-{
-  "featured_games": {
-    "1": {
-      "game": "flyre",
-      "reason": "New update with a new game mode!"
-    },
-    "2": {
-      "game": "pack_the_bag",
-      "reason": "A fun adventure game with a unique twist!"
-    },
-    "3": {
-      "game": "five_nights_at_pythons",
-      "reason": "A thrilling survival horror experience!"
-    }
-  }
-}
+{}

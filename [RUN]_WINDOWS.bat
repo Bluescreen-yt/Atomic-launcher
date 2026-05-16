@@ -1,89 +1,164 @@
 @echo off
+setlocal EnableDelayedExpansion
+
 REM =============================================
-REM [RUN]_WINDOWS_UPDATER.bat (Embedded Python)
+REM [RUN]_WINDOWS.bat
+REM Atomic Launcher - Embedded Python Runtime
 REM =============================================
 
-:: Force the script to run from its own directory (The Root Folder)
+REM --- ROOT DIRECTORY ---
 cd /d "%~dp0"
 
-REM --- SET EMBEDDED PYTHON PATHS ---
-set "EMBEDDED_DIR=%~dp0windows_python_3.14.5"
+REM --- PATHS ---
+set "ROOT=%~dp0"
+set "CODE_DIR=%ROOT%src"
+set "EMBEDDED_DIR=%ROOT%windows_python_3.14.5"
+
 set "PYTHON=%EMBEDDED_DIR%\python.exe"
-set "PIP=%EMBEDDED_DIR%\Scripts\pip.exe"
 
-REM --- FIX IMPORT PATHS FOR PYTHON ---
-:: This tells Python to look inside the 'code' folder for modules like settings.py
-set "PYTHONPATH=%~dp0code"
+REM --- PYTHON MODULE PATHS ---
+set "PYTHONPATH=%CODE_DIR%"
 
-REM --- ENSURE PIP IS INSTALLED IN EMBEDDED PYTHON ---
-if not exist "%PIP%" (
-    echo [INFO] Pip not found in embedded Python. Installing pip...
-    
-    REM Download get-pip.py safely via curl
+REM --- CHECK PYTHON ---
+if not exist "%PYTHON%" (
+    echo.
+    echo [ERROR] Embedded Python not found:
+    echo %PYTHON%
+    echo.
+    pause
+    exit /b 1
+)
+
+
+REM =============================================
+REM ENABLE SITE PACKAGES FOR EMBEDDED PYTHON
+REM =============================================
+
+for %%f in ("%EMBEDDED_DIR%\python*._pth") do (
+    findstr /C:"import site" "%%f" >nul
+    if errorlevel 1 (
+        echo import site>>"%%f"
+    )
+)
+
+REM =============================================
+REM ENSURE PIP EXISTS
+REM =============================================
+
+echo Checking pip...
+
+"%PYTHON%" -m pip --version >nul 2>nul
+
+if errorlevel 1 (
+    echo [INFO] Pip not found. Installing...
+
     curl -sL https://bootstrap.pypa.io/get-pip.py -o "%EMBEDDED_DIR%\get-pip.py"
-    
-    REM Run it using your embedded python
-    "%PYTHON%" "%EMBEDDED_DIR%\get-pip.py" --no-warn-script-location
-    
-    REM Clean up the installer script
+
+    if not exist "%EMBEDDED_DIR%\get-pip.py" (
+        echo [ERROR] Failed to download get-pip.py
+        pause
+        exit /b 1
+    )
+
+    "%PYTHON%" "%EMBEDDED_DIR%\get-pip.py"
+
     del "%EMBEDDED_DIR%\get-pip.py"
-    
-    if not exist "%PIP%" (
-        echo [ERROR] Failed to install pip in the embedded environment.
+
+    "%PYTHON%" -m pip --version >nul 2>nul
+
+    if errorlevel 1 (
+        echo [ERROR] Pip installation failed.
         pause
         exit /b 1
     )
 )
 
-REM --- SPRAWDZENIE INTERNETU ---
-ping -n 1 8.8.8.8 >nul
-IF %ERRORLEVEL% EQU 0 (
-    echo Internet connection found. Checking for updates...
+REM =============================================
+REM INTERNET CHECK
+REM =============================================
 
-    REM --- PRÓBA AKTUALIZACJI PRZEZ GIT ---
+ping -n 1 8.8.8.8 >nul
+
+IF %ERRORLEVEL% EQU 0 (
+
+    echo Internet connection found.
+    echo Checking for updates...
+
+    REM =========================================
+    REM GIT UPDATE
+    REM =========================================
+
     where git >nul 2>nul
+
     IF %ERRORLEVEL% EQU 0 (
+
         if exist ".git" (
             echo Updating via Git...
             git pull origin main
         )
+
     ) ELSE (
-        REM --- OPCJA DLA UŻYTKOWNIKA BEZ GIT (POBIERANIE ZIP) ---
-        echo Git not found. Downloading latest version via CURL...
 
-        set "REPO_URL=https://github.com/mironczuk-dar/Atomic-launcher/archive/refs/heads/main.zip"
+        REM =====================================
+        REM ZIP UPDATE
+        REM =====================================
 
-        curl -L -o update.zip "%REPO_URL%"
+        echo Git not found.
+        echo Downloading latest version...
+
+        set "ZIP_URL=https://github.com/mironczuk-dar/Atomic-launcher/archive/refs/heads/main.zip"
+
+        curl -L -o update.zip "%ZIP_URL%"
 
         if exist "update.zip" (
-            echo Extracting updates...
+
+            echo Extracting update...
+
             powershell -Command "Expand-Archive -Path 'update.zip' -DestinationPath 'temp_update' -Force"
-            
-            REM Excluding the python folder from being overwritten if it exists in the repo
-            xcopy /s /e /y /exclude:%~dp0exclude_list.txt "temp_update\*-main\*" "." >nul 2>nul
-            
-            REM Fallback standard xcopy if no exclusion file exists
-            if %ERRORLEVEL% NEQ 0 xcopy /s /e /y "temp_update\*-main\*" "."
-            
+
+            for /d %%d in ("temp_update\*") do (
+                xcopy "%%d\*" "%ROOT%" /s /e /y /i >nul
+            )
+
             rd /s /q "temp_update"
             del update.zip
-            echo Update complete!
+
+            echo Update complete.
         )
     )
 
-    REM --- AKTUALIZACJA PAKIETÓW PYTHON ---
-    echo Checking Python packages...
-    "%PYTHON%" -m pip install --upgrade pip >nul
-    "%PYTHON%" -m pip install --upgrade pygame-ce pytmx opencv-python >nul
+    REM =========================================
+    REM PYTHON PACKAGES
+    REM =========================================
+
+    echo Updating Python packages...
+
+    "%PYTHON%" -m pip install --upgrade pip --disable-pip-version-check
+
+    "%PYTHON%" -m pip install --upgrade ^
+        pygame-ce ^
+        pytmx ^
+        opencv-python ^
+        --disable-pip-version-check
+
 ) ELSE (
-    echo No internet connection. Starting in offline mode.
+
+    echo No internet connection.
+    echo Starting in offline mode.
 )
 
-REM --- URUCHAMIANIE GRY ---
+REM =============================================
+REM START APPLICATION
+REM =============================================
+
+echo.
 echo Starting Atomic Launcher...
+echo.
 
-:: We stay in the root directory, pointing directly to code\main.py. 
-:: The PYTHONPATH we set above handles the 'settings' import flawlessly.
-"%PYTHON%" code\main.py
+cd /d "%CODE_DIR%"
 
+"%PYTHON%" main.py
+
+echo.
+echo Application closed.
 pause
