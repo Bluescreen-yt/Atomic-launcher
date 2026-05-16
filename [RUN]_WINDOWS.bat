@@ -6,46 +6,36 @@ REM --- ROOT DIRECTORY ---
 cd /d "%~dp0"
 set "ROOT=%~dp0"
 
-REM --- FORCE CLEAN ABSOLUTE PATHS ---
+REM --- ABSOLUTE PATHS ---
 set "CODE_DIR=%ROOT%src"
 set "EMBEDDED_DIR=%ROOT%windows_python"
-set "PYTHON=%EMBEDDED_DIR%\python.exe"
+set "PYTHON=python.exe"
 
-REM --- FORCE PYTHON TO REGISTER ITS OWN CORE DIRECTORIES ---
-REM This tells Python exactly where its C-extensions (_socket) and packages live,
-REM no matter what folder the command prompt is currently sitting in.
-set "PYTHONPATH=%CODE_DIR%;%EMBEDDED_DIR%;%EMBEDDED_DIR%\Lib\site-packages"
-
-REM --- CHECK PYTHON ---
-if not exist "%PYTHON%" (
+REM --- CHECK PYTHON EXISTS ---
+if not exist "%EMBEDDED_DIR%\%PYTHON%" (
     echo.
     echo [ERROR] Embedded Python not found:
-    echo %PYTHON%
+    echo %EMBEDDED_DIR%\%PYTHON%
     echo.
     pause
     exit /b 1
 )
 
 REM =============================================
-REM ENABLE SITE PACKAGES FOR EMBEDDED PYTHON
-REM =============================================
-for %%f in ("%EMBEDDED_DIR%\python*._pth") do (
-    findstr /C:"import site" "%%f" >nul
-    if errorlevel 1 (
-        echo import site>>"%%f"
-    )
-)
-
-REM =============================================
-REM ENSURE PIP EXISTS (PRE-INSTALLED CHECK)
+REM ENSURE PIP EXISTS (NATIVE RUNTIME CHECK)
 REM =============================================
 echo Checking embedded pip...
 
-"%PYTHON%" -m pip --version >nul 2>&1 || (
+REM Temporarily move directly into the python directory to satisfy internal pathing rules
+cd /d "%EMBEDDED_DIR%"
+
+%PYTHON% -m pip --version >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
     echo.
     echo [ERROR] Embedded pip could not be loaded via the script.
     echo Expected layout location: %EMBEDDED_DIR%\Lib\site-packages\pip
     echo.
+    cd /d "%ROOT%"
     pause
     exit /b 1
 )
@@ -60,6 +50,9 @@ ping -n 1 8.8.8.8 >nul
 IF %ERRORLEVEL% EQU 0 (
     echo Internet connection found.
     echo Checking for updates...
+
+    REM Move back to root to perform file adjustments safely
+    cd /d "%ROOT%"
 
     REM =========================================
     REM GIT UPDATE
@@ -95,9 +88,11 @@ IF %ERRORLEVEL% EQU 0 (
     REM =========================================
     echo Updating Python packages...
     
-    REM Force pip to run with explicit pathing mapping
-    "%PYTHON%" -m pip install --upgrade pip --disable-pip-version-check
-    "%PYTHON%" -m pip install --upgrade pygame-ce pytmx opencv-python --disable-pip-version-check
+    REM Return to the embedded folder so Python finds its core C modules natively
+    cd /d "%EMBEDDED_DIR%"
+    
+    %PYTHON% -m pip install --upgrade pip --disable-pip-version-check
+    %PYTHON% -m pip install --upgrade pygame-ce pytmx opencv-python --disable-pip-version-check
 
 ) ELSE (
     echo No internet connection.
@@ -111,8 +106,9 @@ echo.
 echo Starting Atomic Launcher...
 echo.
 
+REM Transition to source directory to kick off main loop
 cd /d "%CODE_DIR%"
-"%PYTHON%" main.py
+"..\\windows_python\\%PYTHON%" main.py
 
 echo.
 echo Application closed.
