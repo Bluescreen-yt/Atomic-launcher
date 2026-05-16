@@ -46,11 +46,13 @@ REM =============================================
 
 echo Checking embedded pip...
 
-"%PYTHON%" -m pip --version >nul 2>nul
+REM Explicitly test pip by asking python to look inside site-packages natively
+"%PYTHON%" -c "import pip" >nul 2>nul
 
-if errorlevel 1 (
-    echo [ERROR] Embedded pip could not be loaded.
-    echo Please make sure 'Lib\site-packages' is added to your python314._pth file.
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Embedded pip could not be loaded via the script.
+    echo Script attempted to call: %PYTHON%
+    echo Please make sure your .bat file is saved with UTF-8 encoding.
     pause
     exit /b 1
 ) else (
