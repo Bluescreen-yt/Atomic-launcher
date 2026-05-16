@@ -1,31 +1,39 @@
 @echo off
-REM ==========================
-REM [RUN]_WINDOWS_UPDATER.bat
-REM ==========================
+REM =============================================
+REM [RUN]_WINDOWS_UPDATER.bat (Embedded Python)
+REM =============================================
 
+:: Force the script to run from its own directory (The Root Folder)
 cd /d "%~dp0"
 
-REM --- SPRAWDZENIE PYTHONA ---
-where python >nul 2>nul
-IF %ERRORLEVEL% NEQ 0 (
-    echo Python is not installed! Proszę zainstaluj Python 3.
-    pause
-    exit /b 1
-)
+REM --- SET EMBEDDED PYTHON PATHS ---
+set "EMBEDDED_DIR=%~dp0windows_python_3.14.5"
+set "PYTHON=%EMBEDDED_DIR%\python.exe"
+set "PIP=%EMBEDDED_DIR%\Scripts\pip.exe"
 
-REM --- CREATE VENV IF MISSING ---
-IF NOT EXIST ".venv\Scripts\python.exe" (
-    echo Creating virtual environment...
-    python -m venv .venv
-    IF %ERRORLEVEL% NEQ 0 (
-        echo Failed to create virtual environment.
+REM --- FIX IMPORT PATHS FOR PYTHON ---
+:: This tells Python to look inside the 'code' folder for modules like settings.py
+set "PYTHONPATH=%~dp0code"
+
+REM --- ENSURE PIP IS INSTALLED IN EMBEDDED PYTHON ---
+if not exist "%PIP%" (
+    echo [INFO] Pip not found in embedded Python. Installing pip...
+    
+    REM Download get-pip.py safely via curl
+    curl -sL https://bootstrap.pypa.io/get-pip.py -o "%EMBEDDED_DIR%\get-pip.py"
+    
+    REM Run it using your embedded python
+    "%PYTHON%" "%EMBEDDED_DIR%\get-pip.py" --no-warn-script-location
+    
+    REM Clean up the installer script
+    del "%EMBEDDED_DIR%\get-pip.py"
+    
+    if not exist "%PIP%" (
+        echo [ERROR] Failed to install pip in the embedded environment.
         pause
         exit /b 1
     )
 )
-
-set "PYTHON=.venv\Scripts\python.exe"
-set "PIP=.venv\Scripts\pip.exe"
 
 REM --- SPRAWDZENIE INTERNETU ---
 ping -n 1 8.8.8.8 >nul
@@ -43,20 +51,20 @@ IF %ERRORLEVEL% EQU 0 (
         REM --- OPCJA DLA UŻYTKOWNIKA BEZ GIT (POBIERANIE ZIP) ---
         echo Git not found. Downloading latest version via CURL...
 
-        REM Zmień poniższy URL na adres Twojego repozytorium
-        set "REPO_URL=https://github.com/TWOJA_NAZWA/TWOJE_REPO/archive/refs/heads/main.zip"
+        set "REPO_URL=https://github.com/mironczuk-dar/Atomic-launcher/archive/refs/heads/main.zip"
 
         curl -L -o update.zip "%REPO_URL%"
 
         if exist "update.zip" (
             echo Extracting updates...
-            REM Rozpakowywanie za pomocą wbudowanego PowerShell
             powershell -Command "Expand-Archive -Path 'update.zip' -DestinationPath 'temp_update' -Force"
             
-            REM Przenoszenie plików (zakładając, że GitHub pakuje w folder 'repo-main')
-            xcopy /s /e /y "temp_update\*-main\*" "."
+            REM Excluding the python folder from being overwritten if it exists in the repo
+            xcopy /s /e /y /exclude:%~dp0exclude_list.txt "temp_update\*-main\*" "." >nul 2>nul
             
-            REM Sprzątanie
+            REM Fallback standard xcopy if no exclusion file exists
+            if %ERRORLEVEL% NEQ 0 xcopy /s /e /y "temp_update\*-main\*" "."
+            
             rd /s /q "temp_update"
             del update.zip
             echo Update complete!
@@ -73,6 +81,9 @@ IF %ERRORLEVEL% EQU 0 (
 
 REM --- URUCHAMIANIE GRY ---
 echo Starting Atomic Launcher...
+
+:: We stay in the root directory, pointing directly to code\main.py. 
+:: The PYTHONPATH we set above handles the 'settings' import flawlessly.
 "%PYTHON%" code\main.py
 
 pause

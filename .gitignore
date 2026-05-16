@@ -6,8 +6,11 @@ games/
 __pycache__/
 *.py[cod]
 
-# Environments (if you ever use a virtual environment)
+# Environments (Covers all common Python virtual environment names)
+.venv/
 venv/
+env/
+ENV/
 .env
 
 # System files
