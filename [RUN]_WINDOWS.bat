@@ -29,7 +29,6 @@ if not exist "%PYTHON%" (
     exit /b 1
 )
 
-
 REM =============================================
 REM ENABLE SITE PACKAGES FOR EMBEDDED PYTHON
 REM =============================================
@@ -42,7 +41,7 @@ for %%f in ("%EMBEDDED_DIR%\python*._pth") do (
 )
 
 REM =============================================
-REM ENSURE PIP EXISTS
+REM ENSURE PIP EXISTS (MANUAL INSTALLATION CHECK)
 REM =============================================
 
 echo Checking pip...
@@ -50,27 +49,10 @@ echo Checking pip...
 "%PYTHON%" -m pip --version >nul 2>nul
 
 if errorlevel 1 (
-    echo [INFO] Pip not found. Installing...
-
-    curl -sL https://bootstrap.pypa.io/get-pip.py -o "%EMBEDDED_DIR%\get-pip.py"
-
-    if not exist "%EMBEDDED_DIR%\get-pip.py" (
-        echo [ERROR] Failed to download get-pip.py
-        pause
-        exit /b 1
-    )
-
-    "%PYTHON%" "%EMBEDDED_DIR%\get-pip.py"
-
-    del "%EMBEDDED_DIR%\get-pip.py"
-
-    "%PYTHON%" -m pip --version >nul 2>nul
-
-    if errorlevel 1 (
-        echo [ERROR] Pip installation failed.
-        pause
-        exit /b 1
-    )
+    echo [ERROR] Pip was not found in your embedded environment.
+    echo Please ensure pip is manually installed correctly.
+    pause
+    exit /b 1
 )
 
 REM =============================================
@@ -137,7 +119,7 @@ IF %ERRORLEVEL% EQU 0 (
 
     "%PYTHON%" -m pip install --upgrade ^
         pygame-ce ^
-        pytmx ^
+        ptmx ^
         opencv-python ^
         --disable-pip-version-check
 
