@@ -86,7 +86,7 @@ class AudioManager:
         if not s.music_on:
             s.stop_music()
         else:
-            s.play_for_state(s.game.state_manager.current_state)
+            s.play_for_state(s.game.state_manager.active_state)
 
     # ----- SOUND EFFECT METHODS -----
     def play_sound(s, sound):

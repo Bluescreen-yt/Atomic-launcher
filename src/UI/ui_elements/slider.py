@@ -77,36 +77,37 @@ class Slider:
     # ==========================================
     # EVENT HANDLING
     # ==========================================
-    def handling_events(s, events):
-
-        mouse_pos = s.game.get_scaled_mouse_pos()
+    def handling_events(s, events, ctrl=None):
+        # Handle both s.game and s.launcher architectures safely
+        engine = s.game if hasattr(s, 'game') else s.launcher
+        mouse_pos = engine.get_scaled_mouse_pos()
 
         for event in events:
-
             # =============================
             # MOUSE DRAG
             # =============================
             if event.type == pygame.MOUSEBUTTONDOWN:
-
                 if event.button == 1 and s.handle_rect.collidepoint(mouse_pos):
                     s.dragging = True
 
-
             elif event.type == pygame.MOUSEBUTTONUP:
-
                 if event.button == 1:
                     s.dragging = False
 
-
             # =============================
-            # KEYBOARD CONTROL
+            # KEYBOARD CONTROL (Remapped)
             # =============================
-            if s.is_selected and event.type == pygame.KEYDOWN:
-
+            if s.is_selected and event.type == pygame.KEYDOWN and ctrl is not None:
+                if event.key == ctrl['right']:
+                    s.change_value(s.step)
+                elif event.key == ctrl['left']:
+                    s.change_value(-s.step)
+                    
+            # Fallback for raw keyboard if ctrl mapping isn't passed down
+            elif s.is_selected and event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_RIGHT:
                     s.change_value(s.step)
-
-                if event.key == pygame.K_LEFT:
+                elif event.key == pygame.K_LEFT:
                     s.change_value(-s.step)
 
 
@@ -114,16 +115,12 @@ class Slider:
         # DRAGGING UPDATE
         # =============================
         if s.dragging:
-
             new_x = max(
                 s.x,
                 min(mouse_pos[0] - s.handle_width//2, s.x + s.width - s.handle_width)
             )
-
             ratio = (new_x - s.x) / (s.width - s.handle_width)
-
             s.value = s.min_val + ratio * (s.max_val - s.min_val)
-
             s.update_handle_position()
 
             if s.on_change:

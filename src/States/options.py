@@ -7,6 +7,7 @@ from UI.options_ui.controls_options_tab import ControlsOptionsTab
 from UI.options_ui.performance_options_tab import PerformanceOptionsTab
 from UI.options_ui.themes_options_tab import ThemesOptionsTab
 from UI.options_ui.video_options_tab import VideoOptionsTab
+from UI.options_ui.audio_options_tab import AudioOptionsTab
 from settings import THEME_LIBRARY, WINDOW_WIDTH, WINDOW_HEIGHT, get_contrast_text_color
 from States.generic_state import BaseState
 
@@ -19,6 +20,7 @@ class Options(BaseState):
         # ---------------- TABS ----------------
         s.tabs = [
             ('Video', VideoOptionsTab(launcher)),
+            ('Audio', AudioOptionsTab(launcher)),
             ('Controls', ControlsOptionsTab(launcher)),
             ('Performance', PerformanceOptionsTab(launcher)),
             ('Themes', ThemesOptionsTab(launcher)),
