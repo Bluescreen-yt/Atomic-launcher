@@ -1,5 +1,6 @@
 STATE_MUSIC_TRACKS = {
-    'Start menu' : 'Menu music',
+    'Library' : 'Menu music',
     'Store' : 'Menu music',
-    'Options menu' : 'Menu music',
+    'Options' : 'Menu music',
+    'Game preview' : 'Menu music'
 }

@@ -73,7 +73,10 @@ DEFUALT_WINDOW_DATA = {
 #AUDIO DATA
 AUDIO_DATA_PATH = join(BASE_DIR, 'data', 'audio_data.json')
 DEFAULT_AUDIO_DATA = {
-    'sound' : 1
+    'music_on' : True,
+    'sound_on' : True,
+    'sound_volume' : 1,
+    'music_volume' : 0.25
 }
 
 #PERFORMANCE SETTINGS

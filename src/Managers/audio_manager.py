@@ -39,6 +39,14 @@ class AudioManager:
 
 
     # ----- MUSIC METHODS -----
+    def pause_music(s):
+        mixer.music.pause()
+
+    def unpause_music(s):
+        if s.music_on: 
+            mixer.music.unpause()
+
+    # ----- MUSIC METHODS -----
     def play_for_state(s, state_name):
         track_name = s.state_music.get(state_name)
         if track_name:

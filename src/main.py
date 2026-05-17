@@ -4,13 +4,14 @@ from sys import exit
 from os import environ
 import platform
 import socket
+import threading
 
 #IMPORTING FILES
 from settings import *
 from Tools.data_loading_tools import load_data, save_data
 
 #IMPROTING STATES AND STATE MANAGERS
-from Tools.game_installer import GameInstaller
+from Machines.game_installing_machine import GameInstaller
 from Managers.audio_manager import AudioManager
 from Managers.state_manager import StateManager
 from UI.sidebar import Sidebar
@@ -24,6 +25,11 @@ try:
     from Drivers.raspberry_pi_gpio import RaspberryPiGPIOController
 except ImportError:
     RaspberryPiGPIOController = None
+
+#IMPROTING FUNCTIONS FOR LOADING ASSETS
+from Machines.asset_importing_machine import (
+    load_audio_assets,
+)
 
 
 #LAUNCHER CLASS
@@ -67,6 +73,11 @@ class Launcher:
         s.clock = pygame.time.Clock()
         s.fps = s.window_data['fps']
 
+        #THREAD FOR LOADING ASSETS
+        s.assets_loaded = False
+        s.assets_thread = threading.Thread(target = s.import_assets, daemon = True)
+        s.assets_thread.start()
+
         #CREATING THE GAME INSTALLER
         s.installer = GameInstaller(GAMES_DIR)
 
@@ -78,6 +89,21 @@ class Launcher:
         #GAME PROCESS
         s.game_process = None
         s.game_running = False
+
+    #METHOD FOR IMPORTING ALL ASSETS
+    def import_assets(s):
+        from concurrent.futures import ThreadPoolExecutor
+
+        with ThreadPoolExecutor(max_workers = 1) as executor:
+            futures = [
+                executor.submit(load_audio_assets, s),
+            ]
+
+            for f in futures:
+                f.result()
+
+        s.assets_loaded = True
+        print('Assets loaded')
 
     #METHOD FOR SETTING UP THE GPIO CONTROLLER
     def setup_gpio_controller(s):
@@ -233,11 +259,15 @@ class Launcher:
             if s.game_process.poll() is not None:
                 s.game_running = False
                 s.game_process = None
+                
+                # --- NEW: Resume the launcher music ---
+                s.audio_manager.unpause_music()
 
         if s.game_running:
             s.delta_time = s.clock.tick(s.performance_settings_data['decrease_launcher_fps_when_game_active']) / 1000
         else:
             s.delta_time = s.clock.tick(s.fps) / 1000
+
 
         print(f"FPS: {s.clock.get_fps():.2f}", end='\r')
 

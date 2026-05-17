@@ -558,6 +558,9 @@ class Library(BaseState):
             )            
             self.launcher.game_running = True 
             
+            # --- NEW: Pause the launcher music ---
+            self.launcher.audio_manager.pause_music()
+            
         except Exception as e:
             print(f"Failed to start: {e}")
             return
