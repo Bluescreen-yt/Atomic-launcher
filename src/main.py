@@ -1,11 +1,3 @@
-import os
-import sys
-
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-if CURRENT_DIR not in sys.path:
-    sys.path.insert(0, CURRENT_DIR)
-
 #IMPORTING LIBRARIES
 import pygame
 from sys import exit
@@ -19,7 +11,8 @@ from Tools.data_loading_tools import load_data, save_data
 
 #IMPROTING STATES AND STATE MANAGERS
 from Tools.game_installer import GameInstaller
-from States.state_manager import StateManager
+from Managers.audio_manager import AudioManager
+from Managers.state_manager import StateManager
 from UI.sidebar import Sidebar
 from States.library import Library
 from States.store import Store
@@ -78,7 +71,7 @@ class Launcher:
         s.installer = GameInstaller(GAMES_DIR)
 
         #CREATING STATE MANAGER AND STATES
-        s.state_manager = StateManager(s)
+        s.setting_up_managers()
         s.creating_states()
         s.sidebar = Sidebar(s)
 
@@ -149,6 +142,11 @@ class Launcher:
         scaled_y = mouse_y * (s.screen.get_height() / s.display.get_height())
 
         return int(scaled_x), int(scaled_y)
+    
+    #METHOD FOR SETTING UP MANAGERS
+    def setting_up_managers(s):
+        s.state_manager = StateManager(s)
+        s.audio_manager = AudioManager(s)
     
     #METHOD FOR SETTING UP THE DISPLAY
     def setting_up_display(s):
