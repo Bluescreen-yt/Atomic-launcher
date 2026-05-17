@@ -8,7 +8,7 @@ from settings import BASE_DIR
 
 
 #LOADING IN AUDIO FILES
-def load_audio_assets(game):
+def load_audio(game):
 
     #INITIALIZING MIXER
     mixer.init()
@@ -29,5 +29,5 @@ def load_assets(game):
     pass
 
 #LOADING GAME FONTS
-def load_game_fonts(game):
+def load_fonts(game):
     pass

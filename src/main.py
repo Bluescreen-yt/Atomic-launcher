@@ -28,7 +28,7 @@ except ImportError:
 
 #IMPROTING FUNCTIONS FOR LOADING ASSETS
 from Machines.asset_importing_machine import (
-    load_audio_assets,
+    load_audio,
 )
 
 
@@ -96,7 +96,7 @@ class Launcher:
 
         with ThreadPoolExecutor(max_workers = 1) as executor:
             futures = [
-                executor.submit(load_audio_assets, s),
+                executor.submit(load_audio, s),
             ]
 
             for f in futures:
