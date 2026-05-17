@@ -4,6 +4,7 @@ from settings import AUDIO_DATA_PATH
 from Tools.data_loading_tools import save_data
 from pygame import mixer
 from Tools.timer import Timer
+from Manifests.music_manifest import STATE_MUSIC_TRACKS
 
 #AUDIO MANAGER CLASS
 class AudioManager:
@@ -11,6 +12,9 @@ class AudioManager:
     # CONSTRUCTOR
     def __init__(s, game):
         s.game = game
+
+        # ----- MUSIC -----
+        s.state_music = STATE_MUSIC_TRACKS
 
         # ----- MUSIC EFFECTS -----
         s.current_track = None

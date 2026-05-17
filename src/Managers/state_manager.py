@@ -20,6 +20,8 @@ class StateManager:
             if hasattr(s.active_state, 'on_enter'):
                 s.active_state.on_enter()
 
+            s.launcher.audio_manager.play_for_state(name)
+
     def handling_events(s, events):
         # Retrieve the key map from settings
         options_key = s.launcher.controlls_data['keyboard']['options']

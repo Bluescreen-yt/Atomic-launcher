@@ -17,7 +17,7 @@ from UI.sidebar import Sidebar
 from States.library import Library
 from States.store import Store
 from States.options import Options
-from Store.game_preview import GamePreview
+from UI.store_ui.game_preview import GamePreview
 
 #RASPBERRY PI GPIO CONTROLLER
 try:
