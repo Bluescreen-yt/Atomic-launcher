@@ -1,13 +1,12 @@
-#IMPORTING LIBRARIES
+# IMPORTING LIBRARIES
 import pygame
 
-#IMPORTING FILES
+# IMPORTING FILES
 from settings import get_contrast_text_color
 from Tools.data_loading_tools import save_data
 from settings import CONTROLLS_DATA_PATH
 from settings import THEME_LIBRARY
 from settings import WINDOW_WIDTH
-from settings import THEME_LIBRARY, WINDOW_WIDTH
 from UI.options_ui.generic_options_tab import GenericOptionsTab
 
 
@@ -16,14 +15,29 @@ class ControlsOptionsTab(GenericOptionsTab):
         super().__init__(launcher)
         
         s.current_theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
-        s.initial_pos = (WINDOW_WIDTH * 0.30, 480) 
-        s.button_size = (280, 80)
+        
+        # --- SPACIOUS CONTAINER LAYOUT ---
+        s.initial_pos = (WINDOW_WIDTH * 0.25, 430) 
+        s.button_size = (460, 130)  # Expanded size to gracefully house both text and images
         s.spacing = 15
-        s.column_spacing = 600
+        s.column_spacing = 700
         
         s.font = pygame.font.SysFont(None, 60, False)
-        s.title_font = pygame.font.SysFont(None, 50, True)
+        s.preset_font = pygame.font.SysFont(None, 40, True)
+        s.title_font = pygame.font.SysFont(None, 70, False)
         s.value_font = pygame.font.SysFont(None, 45, False)
+
+        # Map pygame.key.name strings to your exact launcher.button_images keys
+        s.asset_mapping = {
+            'up': 'up_arrow_button',
+            'down': 'down_arrow_button',
+            'left': 'left_arrow_button',
+            'right': 'right_arrow_button',
+            'return': 'enter_button',
+            'tab': 'tab_button',
+            'action_a': 'r_button',
+            'action_b': 'e_button',
+        }
 
         # --- PRESET CONFIGURATION ---
         s.preset_names = ['Arrows', 'WASD', 'Custom']
@@ -47,7 +61,7 @@ class ControlsOptionsTab(GenericOptionsTab):
         # Check current keys on boot
         s.evaluate_current_preset()
 
-        # Definiujemy grupy klawiszy dla dwóch kolumn
+        # Group components back into clearly labeled rows across two columns
         s.columns = {
             'left': ['up', 'down', 'left', 'right'],
             'right': ['options', 'action_a', 'action_b']
@@ -55,8 +69,8 @@ class ControlsOptionsTab(GenericOptionsTab):
         s.column_names = ['left', 'right']
         s.column_titles = ['Movement Buttons', 'Action Buttons']
         
-        s.active_col_idx = 0  # 0: lewa, 1: prawa
-        s.selected_index = 0  # Indeks wewnątrz danej kolumny
+        s.active_col_idx = 0  # 0: left, 1: right
+        s.selected_index = 0  # Row index within the current column
         
         s.waiting_for_key = False
 
@@ -66,7 +80,6 @@ class ControlsOptionsTab(GenericOptionsTab):
         s.preset_idx = 2  # Default to Custom
         for idx, name in enumerate(['Arrows', 'WASD']):
             preset = s.presets[name]
-            # Check if all keys defined in the preset match the current bindings
             if all(ctrl.get(k) == preset[k] for k in preset):
                 s.preset_idx = idx
                 break
@@ -77,7 +90,7 @@ class ControlsOptionsTab(GenericOptionsTab):
         """Applies the selected preset to the launcher data and saves it."""
         preset_name = s.preset_names[s.preset_idx]
         if preset_name == 'Custom':
-            return  # Do nothing if custom is selected
+            return
         
         preset_data = s.presets[preset_name]
         for key, val in preset_data.items():
@@ -101,7 +114,6 @@ class ControlsOptionsTab(GenericOptionsTab):
                         action_name = s.columns[col_key][s.selected_index]
                         s.update_control(action_name, current_key)
                         
-                        # Modifying a key manually automatically makes it Custom
                         s.preset_idx = 2 
                         s.preset_focus_idx = 2
                         
@@ -144,7 +156,7 @@ class ControlsOptionsTab(GenericOptionsTab):
         if is_up:
             if s.selected_index == 0:
                 s.focus_area = 'preset'
-                s.preset_focus_idx = s.preset_idx # Snap cursor back to the active preset
+                s.preset_focus_idx = s.preset_idx  # Snap cursor back to active preset
             else:
                 s.selected_index -= 1
         elif is_down:
@@ -155,22 +167,18 @@ class ControlsOptionsTab(GenericOptionsTab):
 
     def draw(s, window):
         has_focus = (s.launcher.state_manager.ui_focus == 'content')
+        pressed_keys = pygame.key.get_pressed()
         
         # ---------------------------------------------------------
-        # 1. DRAW PRESET SELECTOR (3 SEPARATE BUTTONS)
+        # 1. DRAW PRESET SELECTOR
         # ---------------------------------------------------------
-        preset_y = s.initial_pos[1] - 160
-        
-        # Sizing and spacing for the 3 buttons
-        p_btn_w = 200
-        p_btn_h = 60
-        p_spacing = 30
+        preset_y = s.initial_pos[1] - 230
+        p_btn_w, p_btn_h, p_spacing = 200, 60, 30
         total_preset_width = (p_btn_w * 3) + (p_spacing * 2)
-        start_x = (WINDOW_WIDTH - total_preset_width) // 2
+        start_x = (WINDOW_WIDTH - total_preset_width) // 2 + 100
 
-        # Draw Title
         p_title_surf = s.value_font.render("Control Scheme", True, s.current_theme['colour_2'])
-        window.blit(p_title_surf, p_title_surf.get_rect(midbottom=(WINDOW_WIDTH // 2, preset_y - 20)))
+        window.blit(p_title_surf, p_title_surf.get_rect(midbottom=(WINDOW_WIDTH // 2 +100, preset_y - 20)))
 
         for i, preset_name in enumerate(s.preset_names):
             x = start_x + i * (p_btn_w + p_spacing)
@@ -179,36 +187,26 @@ class ControlsOptionsTab(GenericOptionsTab):
             is_active = (i == s.preset_idx)
             is_focused = (i == s.preset_focus_idx and s.focus_area == 'preset' and has_focus)
 
-            # Highlight the currently applied preset using your primary theme colour
-            if is_active:
-                bg_colour = s.current_theme['colour_2']
-            else:
-                bg_colour = s.current_theme['colour_4']
-                
+            bg_colour = s.current_theme['colour_2'] if is_active else s.current_theme['colour_4']
             text_colour = get_contrast_text_color(bg_colour)
 
-            pygame.draw.rect(window, bg_colour, rect, border_radius=10)
-            
-            # Highlight the focused element with the yellow outline
+            pygame.draw.rect(window, bg_colour, rect, border_radius=12)
             if is_focused:
-                pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=10)
+                pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=15)
 
-            # Draw Button Text
-            text_surf = s.title_font.render(preset_name, True, text_colour)
-            text_rect = text_surf.get_rect(center=rect.center)
-            window.blit(text_surf, text_rect)
+            text_surf = s.preset_font.render(preset_name, True, text_colour)
+            window.blit(text_surf, text_surf.get_rect(center=rect.center))
 
         # ---------------------------------------------------------
-        # 2. DRAW BINDINGS COLUMNS
+        # 2. DRAW TWO-COLUMN BINDINGS BOXES
         # ---------------------------------------------------------
         for col_idx, col_name in enumerate(s.column_names):
             title = s.column_titles[col_idx]
             x = s.initial_pos[0] + col_idx * s.column_spacing + s.button_size[0] // 2
-            y = s.initial_pos[1] - 60
+            y = s.initial_pos[1] - 40
             
             title_surf = s.title_font.render(title, True, s.current_theme['colour_2'])
-            title_rect = title_surf.get_rect(center=(x, y))
-            window.blit(title_surf, title_rect)
+            window.blit(title_surf, title_surf.get_rect(center=(x, y)))
         
         for col_idx, col_name in enumerate(s.column_names):
             actions = s.columns[col_name]
@@ -230,20 +228,42 @@ class ControlsOptionsTab(GenericOptionsTab):
                 y = s.initial_pos[1] + row_idx * (s.button_size[1] + s.spacing)
 
                 rect = pygame.Rect(x, y, s.button_size[0], s.button_size[1])
-                pygame.draw.rect(window, bg_colour, rect)
+                pygame.draw.rect(window, bg_colour, rect, border_radius=12)
                 
+                # Draw yellow border indicator to clearly show where user is browsing
                 if is_selected and has_focus:
-                    pygame.draw.rect(window, (255, 200, 0), rect, 4)
-                
-                key_code = s.launcher.controlls_data['keyboard'][action_name]
-                key_name = pygame.key.name(key_code).upper()
-                
-                label = action_name.replace('_', ' ').title()
-                display_text = f"{label}: {key_name}" if not is_waiting else "PRESS..."
-                
-                text_surf = s.value_font.render(display_text, True, text_colour)
-                text_rect = text_surf.get_rect(center=rect.center)
-                window.blit(text_surf, text_rect)
+                    pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=15)
+
+                if is_waiting:
+                    prompt_surf = s.value_font.render("PRESS...", True, text_colour)
+                    window.blit(prompt_surf, prompt_surf.get_rect(center=rect.center))
+                else:
+                    # A. Render the action label text on the left side of the panel
+                    label_txt = action_name.replace('_', ' ').title()
+                    label_surf = s.value_font.render(f"{label_txt}:", True, text_colour)
+                    window.blit(label_surf, label_surf.get_rect(midleft=(rect.left + 25, rect.centery)))
+
+                    # B. Pull keyboard codes & calculate active pressed statuses
+                    key_code = s.launcher.controlls_data['keyboard'][action_name]
+                    pygame_name = pygame.key.name(key_code).lower()
+                    
+                    base_image_key = s.asset_mapping.get(pygame_name, f"{pygame_name}_button")
+                    image_key = f"{base_image_key}_pressed" if pressed_keys[key_code] else base_image_key
+
+                    btn_img = None
+                    if image_key in s.launcher.button_images:
+                        btn_img = s.launcher.button_images[image_key]
+                    elif base_image_key in s.launcher.button_images:
+                        btn_img = s.launcher.button_images[base_image_key]
+
+                    # C. Draw button graphics on the right side of the box panel
+                    if btn_img:
+                        img_rect = btn_img.get_rect(midright=(rect.right - 25, rect.centery))
+                        window.blit(btn_img, img_rect.topleft)
+                    else:
+                        # Clean fallback to capital text string strings if images are missing
+                        fallback_text = s.value_font.render(pygame_name.upper(), True, text_colour)
+                        window.blit(fallback_text, fallback_text.get_rect(midright=(rect.right - 25, rect.centery)))
 
     def update_control(s, action_name, new_key):
         s.launcher.controlls_data['keyboard'][action_name] = new_key
