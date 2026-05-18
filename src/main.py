@@ -203,6 +203,9 @@ class Launcher:
         #POLLING GPIO CONTROLLER
         s.poll_gpio()
 
+        #TELLING PYGAME TO IGNORE MOUSE EVENTS
+        pygame.event.set_blocked([pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP])
+
         events = pygame.event.get()
         for event in events:
 
