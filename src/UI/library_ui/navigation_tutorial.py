@@ -1,6 +1,78 @@
 import pygame
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
 
+'''
+class NavigationTutorial:
+    def __init__(s, launcher):
+
+        #PASSING IN LAUNCHER
+        s.launcher = launcher
+
+        #
+        s.theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
+
+        #SETTING UP DIMENSIONS
+        s.width = int(WINDOW_WIDTH * 0,5 - s.launcher.sidebar.base_w)
+        s.height = 500
+
+        #MOVEMENT ATTRIBUTES
+        s.target_x = WINDOW_WIDTH - s.width - 40
+        s.target_y = WINDOW_HEIGHT - s.height - 40
+        s.x = s.target_x
+        s.y = WINDOW_HEIGHT
+        s.speed = 800
+        s.state = 'entering' if not s.launcher.game_library_data.get('navigation_tutorial_shown', False) else 'hidden'
+
+        #FONTS USED
+        s.title_font = pygame.font.SysFont(None, 45, bold=True)
+        s.body_font = pygame.font.SysFont(None, 32)
+        s.action_font = pygame.font.SysFont(None, 28, bold=True)
+
+    #METHOD FOR SETTING UP THE TUTORIAL (CREATING ELEMENTS
+    def setup(s):
+
+        #BACKGROUND AND SHADOW
+        s.background = pygame.Surface((s.width, s.height))
+        s.background.fill(s.theme['colour_1'])
+        s.background_rect = s.background.get_rect(topleft = (s.x, s.y))
+        s.shadow = pygame.Surface((s.width + 30, s.height + 30), pygame.SRCALPHA)
+        s.shadow.fill((0, 0, 0, 110))
+
+        #TITLE AND TEXT
+        s.title_text = s.title_font.render('Navigation Help', True, pygame.Color(s.theme['colour_3']))
+        s.title_rect = s.title_text.get_rect(center = (s.background_rect.centerx, s.background_rect.top + 22))
+
+        s.movement_text = s.body_font.render('Move: Arrow Keys', True, pygame.Color('#D7D7E0'))
+        s.movement_text_rect = s.movement_text.get_rect(topleft = (s.background_rect.left + 22, s.title_rect.bottom + 22))
+
+        s.action_text = s.body_font.render('Actions:', True, pygame.Color('#D7D7E0'))
+        s.action_text_rect = s.action_text.get_rect(topleft = (s.background_rect.left + 22, s.movement_text_rect.bottom + 22))
+
+        #ARROW KEYS
+        s.up_arrow_key = s.launcher.button_images['up_arrow_button']
+        s.up_arrow_key_pressed = s.launcher.button_images['up_arrow_button_pressed']
+
+
+
+
+
+    def draw(s):
+        pass
+
+    def update(s, delta_time):
+        pass
+
+    def handling_events(s, events):
+        pass
+
+    def animate_in(s, delta_time):
+        pass
+
+    def animate_out(s, delta_time):
+        pass
+'''
+
+
 
 class NavigationTutorial:
     def __init__(self, launcher):

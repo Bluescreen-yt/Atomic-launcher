@@ -28,7 +28,8 @@ def load_maps(game):
 
 #LOADING LEVEL ASSETS
 def load_assets(game):
-    pass
+    
+    game.button_images = import_folder_dict(join(BASE_DIR, 'assets', 'button_assets'))
 
 #LOADING GAME FONTS
 def load_fonts(game):

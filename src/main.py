@@ -29,6 +29,7 @@ except ImportError:
 #IMPROTING FUNCTIONS FOR LOADING ASSETS
 from Machines.asset_importing_machine import (
     load_audio,
+    load_assets
 )
 
 
@@ -66,6 +67,7 @@ class Launcher:
         s.display = pygame.display.set_mode((s.window_data['width'], s.window_data['height']), s.flags)
         s.window = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
         s.screen = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
+        pygame.mouse.set_visible(False)
         pygame.display.set_caption('[ATOMIC LAUNCHER]')
         pygame.display.set_icon(pygame.image.load(join(BASE_DIR, 'assets', 'icon.png')))
 
@@ -94,9 +96,10 @@ class Launcher:
     def import_assets(s):
         from concurrent.futures import ThreadPoolExecutor
 
-        with ThreadPoolExecutor(max_workers = 1) as executor:
+        with ThreadPoolExecutor(max_workers = 2) as executor:
             futures = [
                 executor.submit(load_audio, s),
+                executor.submit(load_assets, s)
             ]
 
             for f in futures:
