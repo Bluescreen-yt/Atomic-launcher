@@ -190,12 +190,13 @@ class Options(BaseState):
 
     def refresh_tabs(s):
         """Metoda wywoływana po zmianie motywu, aby odświeżyć kolory w zakładkach."""
-        # Reinicjalizacja zakładek zaktualizuje s.current_theme w ich __init__
+        # Reinitialise ALL 5 tabs in the same order so index lengths match perfectly
         s.tabs = [
-        ('Video', VideoOptionsTab(s.launcher)),
-        ('Controlls', ControlsOptionsTab(s.launcher)),
-        ('Performance', PerformanceOptionsTab(s.launcher)),
-        ('Themes', ThemesOptionsTab(s.launcher)),
+            ('Video', VideoOptionsTab(s.launcher)),
+            ('Audio', AudioOptionsTab(s.launcher)),
+            ('Controls', ControlsOptionsTab(s.launcher)),
+            ('Performance', PerformanceOptionsTab(s.launcher)),
+            ('Themes', ThemesOptionsTab(s.launcher)),
         ]
         # Regenerate icons so they respect the newly selected theme
         s.generate_tab_icons()
