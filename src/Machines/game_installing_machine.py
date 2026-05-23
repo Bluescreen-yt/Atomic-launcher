@@ -27,11 +27,21 @@ class GameInstaller:
         Zwraca pełną ścieżkę do pliku wykonywalnego git lub 'git', 
         jeśli uda się go znaleźć tylko w PATH.
         """
+        # Znajdź główny folder projektu (Atomic-launcher)
+        # Przechodzimy w górę: Machines -> src (lub code) -> Atomic-launcher
+        root_dir = Path(__file__).resolve().parent.parent.parent
+        portable_git_path = root_dir / "PortableGit" / "cmd" / "git.exe"
+
+        # 1. Najpierw sprawdzamy naszą przenośną wersję
+        if portable_git_path.exists():
+            return str(portable_git_path)
+
+        # 2. Sprawdzamy systemowy PATH
         git_path = shutil.which("git")
         if git_path:
             return git_path
         
-        # Awaryjne ścieżki dla systemu Windows
+        # 3. Awaryjne ścieżki dla systemu Windows
         possible_paths = [
             r"C:\Program Files\Git\bin\git.exe",
             r"C:\Program Files\Git\cmd\git.exe"
