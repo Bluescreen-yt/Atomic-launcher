@@ -6,6 +6,7 @@ import os
 import stat
 from typing import Optional
 import threading
+import platform
 
 class GameInstaller:
 
@@ -25,31 +26,33 @@ class GameInstaller:
     def _get_git_executable(self) -> str:
         """
         Zwraca pełną ścieżkę do pliku wykonywalnego git lub 'git', 
-        jeśli uda się go znaleźć tylko w PATH.
+        jeśli uda się go znaleźć tylko w PATH. Różnicuje systemy operacyjne.
         """
-        # Znajdź główny folder projektu (Atomic-launcher)
-        # Przechodzimy w górę: Machines -> src (lub code) -> Atomic-launcher
-        root_dir = Path(__file__).resolve().parent.parent.parent
-        portable_git_path = root_dir / "PortableGit" / "cmd" / "git.exe"
+        # Sprawdzamy, czy system to Windows
+        is_windows = platform.system() == "Windows"
 
-        # 1. Najpierw sprawdzamy naszą przenośną wersję
-        if portable_git_path.exists():
-            return str(portable_git_path)
+        if is_windows:
+            # 1. Sprawdzamy naszą przenośną wersję tylko na Windowsie
+            root_dir = Path(__file__).resolve().parent.parent.parent
+            portable_git_path = root_dir / "PortableGit" / "cmd" / "git.exe"
+            
+            if portable_git_path.exists():
+                return str(portable_git_path)
 
-        # 2. Sprawdzamy systemowy PATH
+            # 2. Awaryjne ścieżki dla systemu Windows
+            possible_paths = [
+                r"C:\Program Files\Git\bin\git.exe",
+                r"C:\Program Files\Git\cmd\git.exe"
+            ]
+            for path in possible_paths:
+                if os.path.exists(path):
+                    return path
+
+        # 3. Dla macOS, Linuxa lub gdy Windows nie ma PortableGit - szukamy w PATH
         git_path = shutil.which("git")
         if git_path:
             return git_path
         
-        # 3. Awaryjne ścieżki dla systemu Windows
-        possible_paths = [
-            r"C:\Program Files\Git\bin\git.exe",
-            r"C:\Program Files\Git\cmd\git.exe"
-        ]
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-                
         # Ostateczny fallback - próbujemy wywołać po nazwie
         return "git"
 
