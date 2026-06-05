@@ -266,7 +266,7 @@ class Launcher:
                 s.game_running = False
                 s.game_process = None
                 
-                # --- NEW: Resume the launcher music ---
+                #RESUMING LAUNCHER MUSIC
                 s.audio_manager.unpause_music()
 
         if s.game_running:
