@@ -1,9 +1,8 @@
 """Bottom bar component for library game actions.
 
 The bottom bar appears when a game is selected and provides actions such
-as favorites toggling, save export, save deletion, and uninstall.
-This component is controlled by `s.visible` and routes input while
-visible.
+as favorites toggling and uninstall. This component is controlled by
+`s.visible` and routes input while visible.
 """
 
 import pygame
@@ -38,17 +37,11 @@ class BottomBar:
         s.font_size = int(WINDOW_WIDTH * 0.04)
         s.font = pygame.font.SysFont(None, s.font_size, bold = False)
 
-        #BUTTONS
+           # BUTTONS (only supported actions)
         s.options = {
-            0 : {'label' : 'Add to favorites',
-                 'callback' : s.add_to_favorites},
-            1 : {'label' : 'Export save files',
-                 'callback' : s.export_save_files},
-            2 : {'label' : 'Delete save files',
-                 'callback' : s.delete_save_files},
-            3 : {'label' : 'Uninstall',
-                 'callback' : s.uninstall_game},
-        }
+              0: {'label': 'Add to favorites', 'callback': s.add_to_favorites},
+              1: {'label': 'Uninstall', 'callback': s.uninstall_game},
+           }
 
     def update(s, delta_time):
         """Update the bottom bar if it has animated or delayed behavior."""
@@ -125,10 +118,6 @@ class BottomBar:
             s.options[s.index]["callback"]()
             s.close_bottombar()
 
-    def export_save_files(s):
-        """Placeholder action for exporting save files (not yet implemented)."""
-        print("Feature coming soon: Favorites")
-
     def add_to_favorites(s):
         # Get the currently selected game folder name
         game = s.library.filtered_games[s.library.selected_index]
@@ -150,9 +139,6 @@ class BottomBar:
         # Refresh the library view in case the favorites filter is currently active
         s.library.apply_search_filter(s.library.searchbar.text)
 
-    def delete_save_files(s):
-        """Placeholder for deleting save files for the selected game."""
-        pass
 
     def uninstall_game(s):
         game = s.library.filtered_games[s.library.selected_index]

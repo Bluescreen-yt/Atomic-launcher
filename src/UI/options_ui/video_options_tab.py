@@ -156,7 +156,7 @@ class VideoOptionsTab(GenericOptionsTab):
             else:
                 fps = s.FPS_options[s.fps_index]
                 if fps == 'Uncapped':
-                    s.update_fps(0)
+                    s.update_fps(1000)
                 else:
                     s.update_fps(fps)
 
