@@ -1,195 +1,226 @@
-# Atomic Launcher - Developer Documentation
+﻿# Atomic Launcher - Developer Documentation
 
-**Version:** 1.0 (Alpha Stage)
+**Version:** 1.0 (Alpha)
 
-**Repository:** [mironczuk-dar/Atomic-launcher](https://github.com/mironczuk-dar/Atomic-launcher.git)
+**Repository:** [mironczuk-dar/Atomic-launcher](https://github.com/mironczuk-dar/Atomic-launcher)
 
-> **Note to Contributors:** Atomic Launcher is currently in Alpha. We are actively seeking pull requests, bug reports, and feature suggestions!
+> This developer guide is intended for contributors and maintainers who want to understand how Atomic Launcher starts, how the project is organized, and how to get a development environment running on Windows or Linux.
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](https://www.google.com/search?q=%231-introduction)
-2. [Getting Started (Setup Guide)](https://www.google.com/search?q=%232-getting-started-setup-guide)
-3. [Project Architecture Overview](https://www.google.com/search?q=%233-project-architecture-overview)
-4. [Under the Hood: How it Works](https://www.google.com/search?q=%234-under-the-hood-how-it-works)
-5. [Adding a New Game](https://www.google.com/search?q=%235-adding-a-new-game-to-the-launcher)
-6. [Contribution Guidelines](https://www.google.com/search?q=%236-contribution-guidelines)
+1. Introduction
+2. Quick Start
+   - Windows
+   - Linux
+3. Project Structure
+4. Core Architecture
+5. Running the Launcher
+6. Dependencies
+7. Adding or Inspecting Games
+8. Contribution Workflow
+9. Notes for Raspberry Pi and GPIO
 
 ---
 
 ## 1. Introduction
 
-Welcome to the official developer documentation for **Atomic Launcher**!
+Atomic Launcher is a Pygame-based launcher designed to host, browse, and run a collection of games from a unified interface. The project is organized to separate platform setup, UI state flow, asset loading, and game installation logic into distinct modules.
 
-Atomic Launcher is an award-winning, open-source application specifically designed to manage and execute Pygame-based games. By providing an integrated ecosystem, the launcher allows players to easily browse their library, manage save files, and boot up Pygame titles (such as *Monster Masters*) from a single, unified interface.
-
-This document is designed to help new developers understand the core architecture of the launcher, how individual elements interact, and how to start contributing or modding the application.
+This document replaces the older documentation and reflects the actual current repository structure and startup process.
 
 ---
 
-## 2. Getting Started (Setup Guide)
+## 2. Quick Start
 
-To run the Atomic Launcher locally and begin development, you will need a basic Python environment.
+Atomic Launcher provides dedicated startup scripts for both Windows and Linux. Use these scripts rather than manually invoking Python when possible.
 
-### Prerequisites
+### Windows
 
-* **Python:** Version 3.8 or higher.
-* **Pygame:** The core rendering and input engine.
-* **Git:** For version control.
+Use the bundled Windows launcher script:
 
-### Installation Steps
-
-1. **Clone the repository:**
-```bash
-git clone https://github.com/mironczuk-dar/Atomic-launcher.git
-cd Atomic-launcher
+```bat
+[RUN]_WINDOWS.bat
 ```
 
+What it does:
 
-2. **Create and activate a virtual environment (Recommended):**
+- changes to the launcher root directory
+- uses the embedded Python runtime at `windows_python/python.exe`
+- checks for an internet connection
+- if connected, attempts to update the repository using Portable Git from `PortableGit/cmd/git.exe`
+- upgrades required Python packages
+- launches `src/main.py`
+
+Important:
+
+- You do **not** need a separate Python installation on Windows.
+- You do **not** need a separate Git installation if the portable Git bundle is present.
+- The launcher is intended to work out of the box using the packaged runtime.
+
+### Linux
+
+Use the Linux startup script:
+
 ```bash
-python -m venv venv
-
-# On macOS/Linux:
-source venv/bin/activate 
-
-# On Windows:
-venv\Scripts\activate
+./[RUN]_LINUX.sh
 ```
 
+What it does:
 
-3. **Install dependencies:**
-```bash
-pip install -r requirements.txt
-```
+- changes to the script directory
+- checks for `python3`
+- creates a local `.venv` environment if one does not already exist
+- installs or upgrades dependencies from `requirements.txt`
+- detects Raspberry Pi hardware and installs GPIO support packages when appropriate
+- launches the application via `src/main.py`
 
+Important:
 
-> *If a `requirements.txt` is not yet present in the branch, simply run `pip install pygame`.*
-
-
-4. **Run the Launcher:**
-```bash
-python main.py
-```
+- Linux requires a system `python3` installation to bootstrap the virtual environment.
+- The script manages its own virtual environment, so developers do not need a global Python environment.
 
 ---
 
-## 3. Project Architecture Overview
+## 3. Project Structure
 
-Atomic Launcher prioritizes **Clean Code** principles. The repository is heavily modularized, meaning that different responsibilities of the launcher are separated into distinct, intuitive directories.
-
-### Directory Structure
+The repository is organized into the following primary directories and files:
 
 ```text
 Atomic-launcher/
-├── assets/             # Global launcher images, fonts, and icons
-├── games/              # Installed Pygame projects (e.g., Monster Masters)
-├── menus/              # State machine logic for different screens
-├── save_wizard/        # Data serialization and save file management
-├── ui_elements/        # Reusable OOP visual components
-└── main.py             # Application entry point
+├── assets/              # launcher UI assets and button graphics
+├── audio/               # shared sound and music files
+├── data/                # persistent JSON data files and defaults
+├── games/               # installed/managed game packages
+├── src/                 # main application source code
+│   ├── Drivers/         # optional input drivers (GPIO, controllers)
+│   ├── Machines/        # background loaders and installer logic
+│   ├── Managers/        # application service classes (audio, state)
+│   ├── Manifests/       # static manifests like music track mapping
+│   ├── States/          # UI states/screens (Library, Store, Options)
+│   ├── Tools/           # helper utilities and JSON loaders
+│   ├── UI/              # screen-specific UI components and widgets
+│   ├── settings.py      # global constants, paths, default configs
+│   └── main.py          # application entry point
+├── windows_python/      # bundled Windows Python runtime
+├── PortableGit/         # bundled Windows Git runtime
+├── requirements.txt     # Python package dependencies
+├── [RUN]_WINDOWS.bat    # Windows startup script
+└── [RUN]_LINUX.sh       # Linux startup script
 ```
 
-### Component Breakdown
+### Key directories
 
-| Module / Directory | Core Responsibility | Key Characteristics |
-| --- | --- | --- |
-| `main.py` | Entry point | Contains the primary Pygame event loop and screen rendering logic. |
-| `/ui_elements/` | Visual Building Blocks | Object-oriented base classes for Buttons, Text boxes, Sliders, etc. |
-| `/menus/` | UI State Logic | Handles the Main Menu, Game Library, and Settings logic. |
-| `/save_wizard/` | Data Management | Reads, writes, and parses game save data (JSON, DAT, PKL) and configs. |
-| `/games/` | Game Storage | The sandbox where individual Pygame projects are stored and executed. |
-
----
-
-## 4. Under the Hood: How it Works
-
-Understanding how the launcher operates is crucial for adding new features without breaking existing functionality.
-
-### A. UI Elements
-
-Instead of drawing shapes directly onto the screen in the main loop, Atomic Launcher uses object-oriented UI components.
-
-* **Interaction:** A `Button` class takes parameters like `x`, `y`, `width`, `height`, `text`, and a `callback_function`. It handles its own hover and click detection, triggering the callback when activated.
-* **Modding:** To change the global look of the launcher, modify the base classes inside `/ui_elements/`. All menus inheriting these classes will automatically update their appearance.
-
-### B. The Menu System (State Machine)
-
-The launcher operates using a **State Machine** pattern. Only one menu (or "state") is active at any given time.
-
-* The `main.py` loop calls the `update()` and `draw()` methods of the *current active state*.
-* Clicking "Library" triggers a function that changes the active state from `MainMenu` to `GameLibrary`. This ensures the codebase remains clean and avoids tangled `if/else` statements.
-
-### C. The Save Wizard
-
-Acts as the bridge between the launcher and the games it hosts.
-
-* **Functionality:** Scans local directories for `.json`, `.dat`, or `.pkl` files belonging to specific games.
-* **Safety:** Ensures game data is backed up or properly loaded before launch.
-* **Extensibility:** If you are adding a new data type or a cloud-sync feature, this module (utilizing Python's native file I/O and `json` libraries) is where you'll work.
-
-### D. Game Execution Pipeline
-
-When a user hits "Play" on a game:
-
-1. The launcher pauses its own main Pygame loop.
-2. It dynamically imports or executes the target game's main Python script.
-3. It securely hands over display control to the game's Pygame instance.
-4. Upon game exit, control returns to the launcher, and the Save Wizard syncs playtime and save data.
+- `src/Drivers/`: optional hardware input support such as Raspberry Pi GPIO.
+- `src/Machines/`: background asset import and repository-based game installation.
+- `src/Managers/`: handles audio playback and application state routing.
+- `src/States/`: contains the different launcher screens and state logic.
+- `src/UI/`: reusable UI widgets and screen-specific presentation classes.
+- `src/Tools/`: small utility helpers for JSON loading, timing, and asset scaling.
 
 ---
 
-## 5. Adding a New Game to the Launcher
+## 4. Core Architecture
 
-Integrating a new Pygame project into Atomic Launcher is fully automated via metadata.
+The launcher is built around a state-driven interface:
 
-1. **Move the Game Files:** Place the new game's directory inside the launcher's `/games/` folder.
-2. **Create a Metadata File:** Create a `config.json` inside the game's root folder. It should look like this:
-```json
-{
-    "title": "My Awesome Game",
-    "developer": "Your Name",
-    "executable": "main.py",
-    "thumbnail": "assets/banner.png",
-    "version": "1.0.0"
-}
-```
+- `src/main.py` initializes the runtime and enters the main event loop.
+- `src/Managers/state_manager.py` switches between active screens and routes input.
+- `src/States/` contains the screen implementations for Library, Store, Options, and Game Preview.
+- `src/UI/` contains reusable widgets such as buttons, sliders, and sidebars.
+- `src/Managers/audio_manager.py` centralizes music and sound playback.
+- `src/Machines/game_installing_machine.py` handles cloning, updating, and removing game repositories.
+- `src/Tools/data_loading_tools.py` manages JSON save/load with fallback defaults.
 
-
-3. **Restart the Launcher:** The `/menus/` and `/save_wizard/` modules will automatically parse this new folder, generate UI elements in the Game Library, and make the game playable.
+The launcher renders to a fixed internal resolution and scales to the operating display, so UI components should generally work with that virtual window size.
 
 ---
 
-## 6. Contribution Guidelines
+## 5. Running the Launcher
 
-Atomic Launcher is an open-source project that welcomes contributions from developers of all skill levels!
+### Recommended flow
 
-### How to Contribute
+1. open a terminal in the launcher root
+2. on Windows: run `[RUN]_WINDOWS.bat`
+3. on Linux: run `./[RUN]_LINUX.sh`
 
-1. **Fork the repository** on GitHub.
-2. **Clone your fork** locally.
-3. **Create a feature branch:** 
+### Direct launch
+
+If you need to run the code directly for debugging, use:
+
 ```bash
-git checkout -b feature/NewAwesomeMenu
+python src/main.py
 ```
 
+But for normal development and execution on this repository, prefer the platform scripts because they initialize the environment and keep the launcher configuration consistent.
 
-4. **Write clean, commented code.** If adding a new UI element, ensure it matches the styling conventions in `/ui_elements/`.
-5. **Commit and Push:**
-```bash
-git commit -m "Added a new dropdown UI element"
-git push origin feature/NewAwesomeMenu
-```
+---
 
+## 6. Dependencies
 
-6. **Open a Pull Request (PR)** on the main repository describing your changes and the problems they solve.
+Dependencies are listed in `requirements.txt` and include:
 
-### Current Alpha Roadmap (Looking for help!)
+- `pygame-ce`
+- `pytmx`
+- `gpiozero`
+- `RPi.GPIO`
+- `pigpio`
+- `lgpio`
+- `opencv-python`
 
-* 🚀 **Asset Loading:** Improving the dynamic loading and caching of game assets.
-* ☁️ **Cloud Saves:** Enhancing the Save Wizard to support remote/cloud backups.
-* ✨ **UI Polish:** Adding smooth animations for UI element transitions.
+### Windows
 
-*Thank you for helping make Atomic Launcher the best home for Pygame creations!*
+The Windows runtime bundle installs Python and runs dependencies through the embedded `windows_python/python.exe`.
+
+### Linux
+
+The Linux script creates `.venv` and installs the requirements automatically. On Raspberry Pi hardware it also installs GPIO support packages.
+
+---
+
+## 7. Adding or Inspecting Games
+
+Installed games are stored under `games/`.
+
+The launcher tracks installed game state and version information through game directories and `version.json` files. If you are adding a new game or inspecting installer behavior, use the `games/` structure as a reference.
+
+---
+
+## 8. Contribution Workflow
+
+### Recommended process
+
+1. fork the repository
+2. clone your fork locally
+3. create a feature branch
+4. make changes with clear comments and docstrings
+5. test using `[RUN]_WINDOWS.bat` or `./[RUN]_LINUX.sh`
+6. commit and push your work
+7. open a pull request with a description of your changes
+
+### Coding guidelines
+
+- keep features modular and isolated
+- prefer small, self-contained changes
+- document new classes and major methods
+- keep UI and state logic separate when possible
+- use the existing `src/` folders as templates for new functionality
+
+---
+
+## 9. Notes for Raspberry Pi and GPIO
+
+On Linux, `[RUN]_LINUX.sh` detects Raspberry Pi hardware and installs required GPIO backends:
+
+- `python3-rpi.gpio`
+- `python3-pigpio`
+- `python3-lgpio`
+
+The project also includes `src/Drivers/raspberry_pi_gpio.py` for mapping GPIO buttons into Pygame events.
+
+---
+
+## Final Notes
+
+This documentation is meant to be up-to-date with the current repository and startup scripts. If you update `[RUN]_WINDOWS.bat` or `[RUN]_LINUX.sh`, please also update this file so future developers always have the correct startup instructions.
