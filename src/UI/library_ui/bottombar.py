@@ -1,22 +1,28 @@
-#IMPORTING LIBRARIES
+"""Bottom bar component for library game actions.
+
+The bottom bar appears when a game is selected and provides actions such
+as favorites toggling, save export, save deletion, and uninstall.
+This component is controlled by `s.visible` and routes input while
+visible.
+"""
+
 import pygame
 from os.path import join, exists
 import shutil
 import os
 import stat
 
-#IMPORTING FILES
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, GAMES_DIR, GAME_LIBRARY_DATA_PATH, get_contrast_text_color
-
-#IMPORTING TOOLS
 from Tools.data_loading_tools import save_data
 
 def remove_readonly(func, path, _):
+    """Helper callback for `shutil.rmtree` to remove read-only flags."""
     os.chmod(path, stat.S_IWRITE)
     func(path)
 
 #BOTTOM BAR WITH EXTRA OPTIONS IN THE LIBRARY
 class BottomBar:
+    """Contextual action panel shown below the library view."""
 
     def __init__(s, launcher, library):
         s.launcher = launcher
@@ -45,9 +51,11 @@ class BottomBar:
         }
 
     def update(s, delta_time):
+        """Update the bottom bar if it has animated or delayed behavior."""
         pass
 
     def draw(s, window):
+        """Render the bottom bar and its current action list when visible."""
         if not s.visible:
             return
         
@@ -78,10 +86,16 @@ class BottomBar:
             window.blit(text, rect)
 
     def handling_events(s, events):
+        """Handle input while the bottom bar is visible.
+
+        This method consumes input to keep focus within the bottom bar until
+        it is closed, then returns control back to the main library view.
+        """
         if not s.visible:
             return
 
-        # 1. Capture the single KEYDOWN event from the queue
+        # 1. Capture a single KEYDOWN event. The bottom bar ignores other
+        #    mouse/key repeat events for reliable menu navigation.
         current_key = None
         for event in events:
             if event.type == pygame.KEYDOWN:
@@ -91,10 +105,7 @@ class BottomBar:
         if current_key is None:
             return
 
-        # 2. Get the control map
         controlls = s.launcher.controlls_data['keyboard']
-        
-        # 3. Map current_key to logical navigation
         is_up = current_key == controlls['up']
         is_down = current_key == controlls['down']
         is_back = current_key == controlls['action_b']
@@ -108,16 +119,14 @@ class BottomBar:
         # --- VERTICAL NAVIGATION ---
         if is_up:
             s.index = max(0, s.index - 1)
-
         elif is_down:
             s.index = min(len(s.options) - 1, s.index + 1)
-
-        # --- EXECUTE CALLBACK (CONFIRM) ---
         elif is_confirm:
             s.options[s.index]["callback"]()
             s.close_bottombar()
 
     def export_save_files(s):
+        """Placeholder action for exporting save files (not yet implemented)."""
         print("Feature coming soon: Favorites")
 
     def add_to_favorites(s):
@@ -142,6 +151,7 @@ class BottomBar:
         s.library.apply_search_filter(s.library.searchbar.text)
 
     def delete_save_files(s):
+        """Placeholder for deleting save files for the selected game."""
         pass
 
     def uninstall_game(s):
@@ -162,20 +172,22 @@ class BottomBar:
         s.close_bottombar()
 
     def open_bottombar(s):
+        """Open the bottom bar and set its input focus."""
         s.visible = not s.visible
         s.index = 0
         s.launcher.state_manager.ui_focus = 'bottombar'
-        
-        # --- NEW CODE: Dynamic Label ---
+
+        # Update the top action label for the currently selected game.
         if s.library.filtered_games:
             current_game = s.library.filtered_games[s.library.selected_index]
             favorites = s.launcher.game_library_data.get('favorites', [])
-            
+
             if current_game in favorites:
                 s.options[0]['label'] = 'Remove from favorites'
             else:
                 s.options[0]['label'] = 'Add to favorites'
 
     def close_bottombar(s):
+        """Close the bottom bar and return focus to the main library view."""
         s.visible = not s.visible
         s.launcher.state_manager.ui_focus = 'content'

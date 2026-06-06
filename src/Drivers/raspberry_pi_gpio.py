@@ -1,4 +1,10 @@
-#IMPORTING LIBRARIES
+"""Optional Raspberry Pi GPIO controller mapping GPIO buttons to Pygame events.
+
+This module converts GPIO input from `gpiozero.Button` objects into
+virtual Pygame keypress events, allowing Raspberry Pi hardware buttons
+to work as launcher controls.
+"""
+
 import pygame
 
 try:
@@ -8,8 +14,8 @@ except ImportError:
 
 #RASPBERRY PI GPIO CONTROLLER CLASS
 class RaspberryPiGPIOController:
+    """GPIO input controller for Raspberry Pi hardware buttons."""
 
-    #CONSTRUCTOR
     def __init__(s, gpio_controlls_data, keyboard_mapping):
         s.buttons = {}
         s.prev_states = {}
@@ -32,6 +38,7 @@ class RaspberryPiGPIOController:
                 s.buttons[action] = None
 
     def poll(s):
+        """Poll GPIO buttons and post matching Pygame key events."""
         if Button is None:
             return
 

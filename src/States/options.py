@@ -1,11 +1,24 @@
-#IMPORTING LIBRARIES
+"""Options state: grouped configuration tabs for video, audio, controls, performance and themes.
+
+This state hosts several sub-tabs that each own their own rendering and
+input logic. The topbar acts as the main navigation header, while the
+currently selected tab receives keyboard/controller input when
+`state_manager.ui_focus == 'content'`.
+
+Developer notes
++- Each tab is implemented in `src/UI/options_ui/` and should expose
++  `handling_events`, `update`, and `draw` methods.
++- Theme changes should call `refresh_tabs` so the tab icons and colours
++  are regenerated for the active theme.
++- `ui_focus` routing is important: topbar navigation and content editing
++  are separated by the focus state in `state_manager`.
+"""
+
 import pygame
 
-#IMPORTING FILES
 from UI.options_ui.themes_options_tab import ThemesOptionsTab
 from UI.options_ui.controls_options_tab import ControlsOptionsTab
 from UI.options_ui.performance_options_tab import PerformanceOptionsTab
-from UI.options_ui.themes_options_tab import ThemesOptionsTab
 from UI.options_ui.video_options_tab import VideoOptionsTab
 from UI.options_ui.audio_options_tab import AudioOptionsTab
 from settings import THEME_LIBRARY, WINDOW_WIDTH, WINDOW_HEIGHT, get_contrast_text_color
@@ -66,6 +79,7 @@ class Options(BaseState):
     # =====================================================
 
     def handling_events(s, events):
+        """Route keyboard/controller input to the topbar or active options tab."""
         ctrl = s.launcher.controlls_data['keyboard']
 
         for event in events:
@@ -92,9 +106,6 @@ class Options(BaseState):
                 elif s.launcher.state_manager.ui_focus == 'content':
                     # Pass the key press to the active tab
                     _, active_tab = s.tabs[s.topbar_index]
-                    
-                    # Note: If your tabs still use 'get_just_pressed', 
-                    # you'll need to update them to handle 'key' or 'events'.
                     active_tab.handling_events(events, ctrl)
 
                     if key == ctrl['action_b']:
@@ -189,7 +200,11 @@ class Options(BaseState):
         s.launcher.state_manager.ui_focus = 'topbar'
 
     def refresh_tabs(s):
-        """Metoda wywoływana po zmianie motywu, aby odświeżyć kolory w zakładkach."""
+        """Refresh tab objects after a theme or settings update.
+
+        This recreates the tab instances so that each tab uses the current
+        theme values and any display changes are reflected immediately.
+        """
         # Reinitialise ALL 5 tabs in the same order so index lengths match perfectly
         s.tabs = [
             ('Video', VideoOptionsTab(s.launcher)),

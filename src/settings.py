@@ -1,11 +1,15 @@
-#IMPORTING LIBRARIES
+"""Application-wide constants and simple utility helpers.
+
+This module exposes directory paths, default configuration payloads and
+small helpers used throughout the launcher. Values here are intentionally
+flat and simple so they can be easily read and overridden by configuration
+files located in the repository `data/` directory.
+"""
+
 import pygame
 from os.path import join, dirname, abspath
 
-#ABSOLUTE PATH
-# abspath(__file__) -> .../Atomic launcher/code/settings.py
-# dirname(...)      -> .../Atomic launcher/code
-# dirname(dirname(...)) -> .../Atomic launcher (ROOT)
+# Compute repository root and games directory
 BASE_DIR = dirname(dirname(abspath(__file__)))
 GAMES_DIR = join(BASE_DIR, 'games')
 
@@ -130,11 +134,20 @@ THEME_LIBRARY = {
 
 
 def hex_to_rgb(hex_color):
+    """Convert a hex color string ("#RRGGBB") to an (R, G, B) tuple.
+
+    Accepts strings starting with or without a leading '#'.
+    """
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
 
 def get_contrast_text_color(bg_color):
+    """Return either black or white text color for readable contrast.
+
+    Uses a simple luminance approximation to choose a contrasting color.
+    Accepts a hex string or an (R, G, B) tuple.
+    """
     if isinstance(bg_color, str):
         r, g, b = hex_to_rgb(bg_color)
     else:

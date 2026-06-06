@@ -1,6 +1,11 @@
-# =========================
-# generic_state.py
-# =========================
+"""Base state class for application screens.
+
+All concrete states should inherit from `BaseState` and implement the
+`handling_events`, `update` and `draw` methods. Global navigation and
+sidebar focus is managed by `StateManager`, so state implementations can
+focus on content-specific behaviour.
+"""
+
 import pygame
 
 
@@ -9,38 +14,22 @@ class BaseState:
         self.launcher = launcher
         self.system = launcher.system
 
-    # =========================
-    # INPUT
-    # =========================
     def handling_events(self, events):
-        """
-        Obsługa inputu lokalnego stanu.
-        Globalny input (TAB, sidebar) jest w StateManager.
+        """Handle input events specific to this state.
+
+        Note: global keys (e.g. toggle sidebar) are handled by the
+        `StateManager`, so state handlers receive only content-relevant events.
         """
         pass
 
-    # =========================
-    # UPDATE
-    # =========================
     def update(self, delta_time):
-        """
-        Logika stanu.
-        Sidebar i focus NIE są tu aktualizowane.
-        """
+        """Update state logic. Sidebar and focus management are outside this method."""
         pass
 
-    # =========================
-    # DRAW
-    # =========================
     def draw(self, window):
-        """
-        Rysowanie zawartości stanu.
-        Sidebar rysowany jest w StateManager.
-        """
+        """Render the state's content into the provided surface."""
         pass
 
-    # =========================
-    # LIFECYCLE
-    # =========================
     def on_enter(self):
+        """Optional lifecycle hook called when this state becomes active."""
         pass

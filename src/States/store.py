@@ -1,3 +1,33 @@
+"""Store state: UI for browsing and installing games from the store.
+
+This module implements the `Store` state which displays store entries,
+manages filtering/searching, shows the download queue, and integrates
+with the launcher's installer subsystem.
+
+Developer notes
+- Manifests: store and game metadata live in `src/Manifests/games_manifest.json`.
+- Assets: per-game assets (icons, fonts, images) live under
+    `assets/store_assets/<game_id>/` (see `import_image` usage and
+    `_get_cached_icon`).
+- Installer integration: the active download/install state is provided
+    by `launcher.installer`. Methods such as `update_statuses` and
+    `draw_download_panel` read installer state and should remain
+    synchronized with the installer API.
+- UI components: this state composes `UI.store_ui.FeatureFrame`,
+    `UI.store_ui.StoreEntry`, `UI.ui_elements.SearchBar`, and toggle
+    buttons. See those modules when changing layout or behaviour.
+- Focus and navigation: keyboard/controller focus is driven by
+    `state_manager.ui_focus`. This state uses the focus set
+    `['searchbar','filters','featured','tabs','content','download']` —
+    update `state_manager` usage carefully when changing focus logic.
+
+Quick developer tasks
+- To add a new game: add an entry to the manifest and place assets in
+    `assets/store_assets/<game_id>/` (icon, optional `fonts/`, etc.).
+- To extend categories/tabs: update `self.tabs` and ensure the
+    filtering logic in `apply_filters` supports the new tag names.
+"""
+
 import pygame
 from os.path import join
 import math

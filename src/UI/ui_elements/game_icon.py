@@ -1,11 +1,18 @@
+"""Game icon sprite used by the library and store screens.
+
+This sprite loads a game's icon image and renders a selection outline
+when the icon is active. It can also show a download badge during
+active installer download operations.
+"""
+
 import pygame
 import os
 
 from settings import GAMES_DIR, THEME_LIBRARY
 from Tools.asset_importing_tool import import_image 
 
-#GAME ICONS USED IN LIBARY AND STORE
 class GameIcon(pygame.sprite.Sprite):
+    """Sprite wrapper for a game icon image and its selection state."""
     def __init__(
         s,
         launcher,

@@ -1,16 +1,19 @@
-#IMPORTING LIBRARIES
+"""Performance options tab.
+
+This tab exposes launcher performance settings such as the background FPS
+and whether the launcher should shut down when a game starts.
+"""
+
 import pygame
 
-#IMPORTING FILES
 from settings import get_contrast_text_color
 from Tools.data_loading_tools import save_data
-from settings import THEME_LIBRARY
-from settings import WINDOW_WIDTH
 from settings import PERFORMANCE_SETTINGS_DATA_PATH, THEME_LIBRARY, WINDOW_WIDTH
 from UI.options_ui.generic_options_tab import GenericOptionsTab
 
 
 class PerformanceOptionsTab(GenericOptionsTab):
+    """Options tab for launcher performance tuning."""
 
     def __init__(s, launcher):
         super().__init__(launcher)
@@ -25,11 +28,11 @@ class PerformanceOptionsTab(GenericOptionsTab):
         s.font = pygame.font.SysFont(None, 45, False)
         s.header_font = pygame.font.SysFont(None, 55, True)
 
-        # Opcje FPS do wyboru
+        # FPS options available for launcher background mode
         s.fps_levels = [60, 40, 30, 20, 15, 10, 5]
         
-        # Nawigacja
-        s.active_col = 'fps'  # 'fps' lub 'shutdown'
+        # Navigation state between the FPS options column and the shutdown toggle
+        s.active_col = 'fps'  # 'fps' or 'shutdown'
         s.fps_index = 0
 
     def update_visuals(s):

@@ -1,13 +1,32 @@
-# IMPORTING LIBRARIES
+"""Audio options tab: volume controls and audio toggles.
+
+This tab exposes music and sound sliders and allows the user to toggle
+background music and sound effects on or off. It also performs a preview
+sound effect after the user changes the sound volume, throttled by a
+cooldown timer.
+
+Developer notes
++- `handling_events` supports both keyboard navigation and raw UI element
++  mouse events. If you add new UI elements, ensure they implement
++  `handling_events(events, ctrl)` or fallback gracefully.
++- Audio state is written through `launcher.audio_manager` and should stay
++  consistent with `launcher.audio_data`.
+"""
+
 import pygame
 
-# IMPORTING FILES
-from UI.options_ui.generic_options_tab import GenericOptionsTab
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
+from UI.options_ui.generic_options_tab import GenericOptionsTab
 from UI.ui_elements.slider import Slider
 from UI.ui_elements.buttons import GenericToggleButton
 
 class AudioOptionsTab(GenericOptionsTab):
+    """Options tab for audio volume and toggle settings.
+
+    This tab controls music and sound settings through `AudioManager` and
+    schedules preview audio playback whenever the sound volume changes.
+    """
+
     def __init__(s, launcher):
         super().__init__(launcher)
         
@@ -72,11 +91,12 @@ class AudioOptionsTab(GenericOptionsTab):
         ])
 
     def handle_sound_volume_change(s, v):
-        """Updates volume state and raises a flag to request a preview audio blip."""
+        """Update the sound volume and mark the change for a preview sound."""
         s.launcher.audio_manager.set_sound_volume(v)
         s.sound_changed_flag = True
 
     def handling_events(s, events, ctrl):
+        """Handle keyboard and UI element events inside the audio tab."""
         if s.launcher.state_manager.ui_focus != 'content':
             return
 
@@ -140,6 +160,7 @@ class AudioOptionsTab(GenericOptionsTab):
                 active_element.handling_events(events)
 
     def update(s, delta_time):
+        """Update internal timers and UI elements each frame."""
         # Update logic for sliders/buttons
         for element in s.ui_elements:
             if hasattr(element, 'update'):
@@ -161,6 +182,7 @@ class AudioOptionsTab(GenericOptionsTab):
             s.preview_cooldown_timer = s.preview_cooldown_duration
 
     def draw(s, window):
+        """Draw the audio controls and highlight the focused element."""
         has_focus = (s.launcher.state_manager.ui_focus == 'content')
         
         for i, element in enumerate(s.ui_elements):

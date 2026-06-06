@@ -1,7 +1,15 @@
+"""Horizontal slider control for numeric settings.
+
+This slider supports mouse dragging and keyboard/controller adjustment
+when the slider has focus. It is used by audio and performance settings
+for volume, speed, and other tunable values.
+"""
+
 import pygame
 
 
 class Slider:
+    """Slider widget supporting discrete step changes and drag input."""
 
     # ==========================================
     # CONSTRUCTOR
@@ -74,10 +82,8 @@ class Slider:
         pass
 
 
-    # ==========================================
-    # EVENT HANDLING
-    # ==========================================
     def handling_events(s, events, ctrl=None):
+        """Process mouse and keyboard/controller events for the slider."""
         # Handle both s.game and s.launcher architectures safely
         engine = s.game if hasattr(s, 'game') else s.launcher
         mouse_pos = engine.get_scaled_mouse_pos()
@@ -127,10 +133,8 @@ class Slider:
                 s.on_change(s.value)
 
 
-    # ==========================================
-    # UPDATE
-    # ==========================================
     def update(s, delta_time):
+        """Advance timed state for the slider if needed."""
         pass
 
 

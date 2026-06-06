@@ -1,12 +1,17 @@
-#IMPORTING LIBRARIES
+"""Common button widget implementations for the launcher UI.
+
+This module contains generic button classes used across the library,
+store, options, and other screens. It includes plain buttons, image
+buttons, audio buttons, and toggle buttons.
+"""
+
 import pygame
 
-# IMPORTING FILES
 from settings import get_contrast_text_color
 
 
-#A GENERIC BUTTON CLASS
-class GenericButton():
+class GenericButton:
+    """Basic rectangular button with optional click sound and action."""
     def __init__(s, game, size, pos, text, text_size = 40, text_colour = (0,0,0), colour = (255, 0, 0), action = None, sound = None):
 
         s.game = game
@@ -175,6 +180,7 @@ class AudioButton(GenericButton):
 
 #A TOGGLE BUTTON
 class GenericToggleButton:
+    """Toggle button that maintains on/off state and supports theme colors."""
     def __init__(s, game, size, pos, text, text_size=40, active_colour=(0,255,0), inactive_colour=(255,0,0), action=None):
 
         s.game = game

@@ -1,3 +1,10 @@
+"""Animated navigation tutorial overlay for first-time users.
+
+This module renders a help overlay explaining the main navigation keys.
+It appears when the user first opens the library and can be dismissed with
+Enter/action.
+"""
+
 import pygame
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
 
@@ -34,6 +41,7 @@ class NavigationTutorial:
         }
 
     def is_active(self):
+        """Return whether the tutorial overlay is currently visible or animating."""
         return self.state in ('entering', 'visible')
 
     def handle_input(self, events):
@@ -76,6 +84,7 @@ class NavigationTutorial:
                 self.state = 'hidden'
 
     def draw(self, window):
+        """Draw the tutorial window and current control mapping hints."""
         if self.state == 'hidden':
             return
 

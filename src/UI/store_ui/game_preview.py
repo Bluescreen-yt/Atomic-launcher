@@ -1,3 +1,11 @@
+"""Game preview state for a single store item.
+
+This state shows game metadata, screenshots or preview video, and
+install/update actions for a selected store item. It integrates with the
+installer queue and can launch game executables from the selected game
+package.
+"""
+
 import pygame
 import os
 import shutil
@@ -10,7 +18,6 @@ import stat
 from os import listdir
 from os.path import join, isdir, isfile
 
-# --- NEW IMPORT ---
 import cv2  # Used for decoding video files frame-by-frame
 
 from States.generic_state import BaseState
@@ -23,6 +30,13 @@ def remove_readonly(func, path, _):
     func(path)
 
 class GamePreview(BaseState):
+    """State for previewing a selected game's store page.
+
+    It supports a mixture of static screenshots and optional preview
+    video playback, plus install/update/uninstall actions for the current
+    game.
+    """
+
     def __init__(s, launcher):
         super().__init__(launcher)
         s.game_id = None
@@ -49,6 +63,7 @@ class GamePreview(BaseState):
         s.description_font_path = None
 
     def setup(s, game_id, game_data):
+        """Initialize preview state for a specific game selection."""
         s.game_id = game_id
         s.data = game_data
         s.current_img_index = 0
@@ -83,6 +98,7 @@ class GamePreview(BaseState):
             s.data['size'] = None
 
     def check_status(s):
+        """Update the preview status badge based on installer and local state."""
         manifest_version = s.data.get('version')
         if s.launcher.installer.is_downloading and s.launcher.installer.current_game_id == s.game_id:
             s.status = GameStatus.DOWNLOADING
@@ -250,6 +266,7 @@ class GamePreview(BaseState):
         return surface
 
     def handling_events(s, events):
+        """Handle input events while the game preview is active."""
         ctrl = s.launcher.controlls_data['keyboard']
         
         for event in events:

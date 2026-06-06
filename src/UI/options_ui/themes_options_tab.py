@@ -1,17 +1,21 @@
-#IMPORTING LIBRARIES
+"""Theme selection options tab.
+
+This tab displays a list of available launcher themes and allows the user
+to switch the current theme. It persists the selected theme to disk and
+notifies the parent options state to refresh its tab visuals.
+"""
+
 import pygame
 
-#IMPORTING FILES
 from settings import get_contrast_text_color
 from Tools.data_loading_tools import save_data
-from settings import THEME_LIBRARY, THEMES_DATA_PATH
-from settings import WINDOW_WIDTH
-from settings import THEME_LIBRARY, WINDOW_WIDTH
+from settings import THEME_LIBRARY, THEMES_DATA_PATH, WINDOW_WIDTH
 from UI.options_ui.generic_options_tab import GenericOptionsTab
 
 
 
 class ThemesOptionsTab(GenericOptionsTab):
+    """Options tab that lists available themes and allows selection."""
 
     def __init__(s, launcher):
         super().__init__(launcher)
@@ -99,7 +103,7 @@ class ThemesOptionsTab(GenericOptionsTab):
             if is_active:
                 pygame.draw.rect(window, (255, 255, 255), rect, 4, border_radius=10)
 
-            # 🔹 FOCUS INDICATOR = AKTUALNIE ZAZNACZONY ELEMENT
+                # Focus indicator for the currently selected theme button
             if is_hovered:
                 pygame.draw.rect(window, (255, 200, 0), rect, 4, border_radius=10)
 

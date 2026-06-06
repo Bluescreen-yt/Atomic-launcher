@@ -1,9 +1,15 @@
-#IMPORTING LIBRARIES
+"""On-screen keyboard widget for text input in UI states.
+
+This class implements a grid-based keyboard that can be navigated with
+controller or keyboard directional input, and it is used by the search
+bar to receive text input from the user.
+"""
+
 import pygame
 
 
-#UNIVERSAL KEYBOARD CLASS FOR INPUTTING TEXT (LIKE NAME SELECTION)
 class Keyboard:
+    """Grid-based text input widget for virtual keyboard entry."""
     def __init__(s, game, pos, size = (400, 300), max_length=12):
 
         #PASSING IN GAME AS AN ATTRIBUTE
@@ -33,8 +39,8 @@ class Keyboard:
         s.grid_pos = [0, 0]
         s.font = pygame.font.SysFont("Arial", 28)
 
-    #METHOD FOR HANDLING KEYBOARD INPUT
     def handling_events(s, events):
+        """Handle controller/keyboard events for the on-screen keyboard."""
         ctrl = s.game.controlls_data['keyboard']
         
         for event in events:
@@ -60,8 +66,8 @@ class Keyboard:
                 if event.key == ctrl['action_b']:
                     s.text = s.text[:-1]
 
-    #METHOD FOR SELECTING A CHARACTER BASED ON THE CURRENT GRID POSITION
     def select_char(s, char):
+        """Interpret the selected grid cell and update the typed text."""
         if char == '<-':
             s.text = s.text[:-1]
 
@@ -91,8 +97,8 @@ class Keyboard:
 
                 s.shift = False
 
-    #METHOD FOR DRAWING THE KEYBOARD
     def draw(s, window):
+        """Draw the keyboard keys and highlight the current selection."""
         x, y = s.pos
         width, height = s.size
 

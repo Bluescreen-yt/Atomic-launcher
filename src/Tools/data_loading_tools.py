@@ -1,38 +1,44 @@
-#IMPORTING LIBRARIES
+"""Utilities to load and save JSON configuration/data files.
+
+This module provides two simple helpers used across the launcher to
+load persisted configuration (with a fallback to defaults) and to save
+data back to disk. The functions are intentionally small and dependency
+free (beyond the standard library) so they can be used by other
+startup components.
+"""
+
 import json
 from os import makedirs
 from os.path import exists, dirname
 
-#IMPORTING FILES
 from settings import *
 
 
-#FUNCTION FOR LOADING THE GAME DATA
 def load_data(data_path, default_data):
+    """Load JSON data from `data_path` or return `default_data`.
 
-    #CHECKING IF THE DATA EXISTS
+    If the file exists but contains invalid JSON the function will log a
+    message, overwrite the file with `default_data` and return the default.
+    """
+
     if exists(data_path):
         with open(data_path, 'r') as save_file:
             try:
-
-                #TRYING TO LOAD THE SAVE DATA
                 return json.load(save_file)
-            
             except json.JSONDecodeError:
                 print('Save file is corrupted.\nCreating a new one with default data!')
 
-    #IF THE SAVE FILE DOES NOT EXIST OR IS CORRUPTED, CREATING A NEW SAVE FILE WITH DEFAULT DATA
+    # If the file is missing or invalid, create it with default content
     save_data(default_data, data_path)
     return default_data
 
 
-
-#FUNCTION FOR SAVING DATA FILES
 def save_data(data, save_path):
+    """Write `data` as JSON to `save_path`, creating parent directories.
 
-    #ENSURING THE DIRECTORY EXISTS BEFORE WRITTING THE DATA
-    makedirs(dirname(save_path), exist_ok = True)
+    Uses `indent=4` for readable files that are convenient for manual edits.
+    """
 
-    #CREATING THE SAVE FILE
+    makedirs(dirname(save_path), exist_ok=True)
     with open(save_path, 'w') as save_file:
-        json.dump(data, save_file, indent = 4)
+        json.dump(data, save_file, indent=4)

@@ -1,11 +1,23 @@
-#IMPORTING LIBRARIES
+"""Simple timer utility used for delayed or repeating callbacks.
+
+The Timer wraps Pygame's millisecond clock to provide an easy-to-use
+countdown mechanism for UI effects and time-based events.
+"""
+
 import pygame
 
-#INVERSAL TIMER TOOL
+
 class Timer:
-    
-    #TIMER CLASS CONSTRUCTOR
-    def __init__(s, duration, autostart = False, function = None, repeat = False):
+    """A lightweight countdown timer that triggers an optional callback.
+
+    Parameters
+    - duration: milliseconds until the timer fires
+    - autostart: if True, timer begins immediately after construction
+    - function: optional callable to invoke when the timer completes
+    - repeat: if True, the timer restarts automatically after firing
+    """
+
+    def __init__(s, duration, autostart=False, function=None, repeat=False):
         s.duration = duration
         s.function = function
         s.start_time = 0
@@ -16,24 +28,24 @@ class Timer:
         if s.autostart:
             s.activate()
 
-    #METHOD FOR ACTIVATING THE TIMER
     def activate(s):
+        """Start or restart the timer."""
         s.active = True
         s.start_time = pygame.time.get_ticks()
 
-    #METHOD FOR DEACTIVATING THE TIMER
     def deactivate(s):
+        """Stop the timer. If `repeat` is set, the timer restarts."""
         s.active = False
         s.start_time = 0
-        
+
         if s.repeat:
             s.activate()
 
-    #METHOD FOR UPDATING THE TIMER
     def update(s):
+        """Call periodically (e.g. each frame). Executes `function` when due."""
         if not s.active:
             return
-        
+
         current_time = pygame.time.get_ticks()
 
         if current_time - s.start_time >= s.duration:

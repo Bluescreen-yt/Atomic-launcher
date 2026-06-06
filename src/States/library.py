@@ -1,11 +1,39 @@
-# IMPORTING LIBRARIES
+"""Library state: displays installed games and supports navigation.
+
+Responsibilities
+- Load the local games manifest and present installed games to the user.
+- Provide keyboard/controller focused navigation, a search bar, favorites
+    filter, and control-type filters (keyboard/mouse).
+- Compose UI building blocks from `UI/ui_elements` and `UI/library_ui`.
+
+Developer notes
+- Manifest: games metadata is located at
+    `src/Manifests/games_manifest.json`. Use `Tools.data_loading_tools.load_data`
+    to read and `save_data` to persist any changes.
+- Assets: per-game assets (icons, fonts) are stored in
+    `assets/store_assets/<game_id>/` — title fonts are looked for in a
+    `fonts/` subfolder (see `_load_game_title_font`).
+- Focus model: `state_manager.ui_focus` and the local flags
+    `topbar_focus`/`topbar_index` determine which control receives input.
+    When changing focus logic, verify interactions with `BottomBar` and
+    `NavigationTutorial` as they short-circuit input handling.
+- Where to extend: UI widgets are split between `UI.ui_elements` (generic
+    buttons, toggles, searchbar) and `UI.library_ui` (layout-specific
+    components). Modify those modules when changing appearance or behavior.
+
+Quick developer tasks
+- Add a new per-game title font by placing a TTF into
+    `assets/store_assets/<game_id>/fonts/` with one of the candidate names
+    (`title.ttf`, `title_font.ttf`, ...). The loader will attempt them in
+    order.
+"""
+
 import pygame
 import math
 import os
 import subprocess
 import sys
 
-# IMPORTING FILES
 from States.generic_state import BaseState
 from settings import GAMES_DIR, BASE_DIR, WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
 from UI.ui_elements.searchbar import SearchBar
@@ -14,7 +42,6 @@ from UI.library_ui.bottombar import BottomBar
 from UI.ui_elements.buttons import GenericToggleButton, ImageToggleButton
 from UI.library_ui.navigation_tutorial import NavigationTutorial
 
-# IMPORTING TOOLS
 from Tools.data_loading_tools import load_data
 
 

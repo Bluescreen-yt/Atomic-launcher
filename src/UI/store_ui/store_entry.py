@@ -1,3 +1,10 @@
+"""Store entry card and status helpers for the store screen.
+
+This module defines `StoreEntry`, the visual card used to render a single
+store item in the grid. It also defines `GameStatus`, a simple enum for
+install/download state badges.
+"""
+
 import pygame
 from enum import Enum, auto
 from os.path import join
@@ -15,6 +22,13 @@ class GameStatus(Enum):
 
 
 class StoreEntry(pygame.sprite.Sprite):
+    """Visual card for a single store game entry.
+
+    `StoreEntry` renders the game icon, title, description, tags, and
+    current install/download state. It is created by `Store.load_store_entries`
+    and drawn inside the store content pane.
+    """
+
     def __init__(self, launcher, game_id, game_data, status, size, position):
         super().__init__()
 

@@ -1,4 +1,15 @@
-#IMPORTING LIBRARIES
+"""
+Atomic Launcher - main entrypoint
+
+This module initializes and runs the Atomic Launcher application built with
+Pygame. It configures platform-specific features (GPIO on Raspberry Pi),
+loads application data and assets, manages application states, and runs the
+main event/update/draw loop.
+
+The `Launcher` class encapsulates the runtime environment and lifecycle of
+the launcher.
+"""
+
 import pygame
 from sys import exit
 from os import environ
@@ -6,11 +17,10 @@ import platform
 import socket
 import threading
 
-#IMPORTING FILES
 from settings import *
 from Tools.data_loading_tools import load_data, save_data
 
-#IMPROTING STATES AND STATE MANAGERS
+# State machines, managers and UI states
 from Machines.game_installing_machine import GameInstaller
 from Managers.audio_manager import AudioManager
 from Managers.state_manager import StateManager
@@ -20,50 +30,47 @@ from States.store import Store
 from States.options import Options
 from UI.store_ui.game_preview import GamePreview
 
-#RASPBERRY PI GPIO CONTROLLER
+# Optional Raspberry Pi GPIO controller. If import fails the launcher
+# will continue to run without GPIO support.
 try:
     from Drivers.raspberry_pi_gpio import RaspberryPiGPIOController
 except ImportError:
     RaspberryPiGPIOController = None
 
-#IMPROTING FUNCTIONS FOR LOADING ASSETS
-from Machines.asset_importing_machine import (
-    load_audio,
-    load_assets
-)
+# Helpers that import and prepare game assets and audio in background
+from Machines.asset_importing_machine import load_audio, load_assets
 
 
-#LAUNCHER CLASS
 class Launcher:
+    """Encapsulates the launcher lifecycle, configuration and main loop.
 
-    #INFORMATION ABOUT THE LAUNCHER
+    The class is responsible for initializing platform-specific components,
+    loading persistent settings, starting a background asset-loading thread,
+    creating the game installer and state manager, and running the main
+    application loop.
+    """
+
     def __str__(s):
-        return'''
-        A launcher for Pygame applications.
-        '''
-    
-    #CONSTRUCTOR
-    def __init__(s):    
+        return 'Atomic Launcher - runtime controller for the Pygame UI'
 
-        #CHECKING THE SYSTEM THE DEVICE IS RUNNING ON
+    def __init__(s):
+        """Initialize runtime, configuration, managers and surfaces."""
+
+        # platform and online status
         s.system = s.checking_operating_system()
-
-        #CHECKING INTERNET ACCESS
         s.online_mode = s.checking_internet_connection()
 
-        #INITALIZING PYGAME
+        # initialize pygame and load persistent configuration
         pygame.init()
-
-        #LOADING IN LAUNCHER DATA
         s.loading_in_launcher_data()
 
-        #LOADING IN THE GPIO CONTROLLER
+        # optional GPIO controller on Raspberry Pi
         s.setup_gpio_controller()
 
-        #SETTING UP THE DISPLAY
+        # configure display flags (fullscreen or resizable)
         s.setting_up_display()
 
-        #INITALIZING DISPLAY
+        # initialize display surfaces and window properties
         s.display = pygame.display.set_mode((s.window_data['width'], s.window_data['height']), s.flags)
         s.window = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
         s.screen = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
@@ -71,60 +78,70 @@ class Launcher:
         pygame.display.set_caption('[ATOMIC LAUNCHER]')
         pygame.display.set_icon(pygame.image.load(join(BASE_DIR, 'assets', 'icon.png')))
 
-        #INITALIZING CLOCK
+        # timing
         s.clock = pygame.time.Clock()
         s.fps = s.window_data['fps']
 
-        #THREAD FOR LOADING ASSETS
+        # background thread to import assets without blocking startup
         s.assets_loaded = False
-        s.assets_thread = threading.Thread(target = s.import_assets, daemon = True)
+        s.assets_thread = threading.Thread(target=s.import_assets, daemon=True)
         s.assets_thread.start()
 
-        #CREATING THE GAME INSTALLER
+        # installer and state management
         s.installer = GameInstaller(GAMES_DIR)
-
-        #CREATING STATE MANAGER AND STATES
         s.setting_up_managers()
         s.creating_states()
         s.sidebar = Sidebar(s)
 
-        #GAME PROCESS
+        # process tracking for launched games
         s.game_process = None
         s.game_running = False
 
-    #METHOD FOR IMPORTING ALL ASSETS
     def import_assets(s):
+        """Load audio and other assets in background threads.
+
+        This uses a small thread pool to parallelize expensive I/O so the UI
+        can become responsive quickly while assets finish loading.
+        """
         from concurrent.futures import ThreadPoolExecutor
 
-        with ThreadPoolExecutor(max_workers = 2) as executor:
+        with ThreadPoolExecutor(max_workers=2) as executor:
             futures = [
                 executor.submit(load_audio, s),
-                executor.submit(load_assets, s)
+                executor.submit(load_assets, s),
             ]
-
+            # Wait for both tasks to complete and propagate exceptions
             for f in futures:
                 f.result()
 
         s.assets_loaded = True
         print('Assets loaded')
 
-    #METHOD FOR SETTING UP THE GPIO CONTROLLER
     def setup_gpio_controller(s):
+        """Initialize Raspberry Pi GPIO controller if available.
+
+        The GPIO controller is optional; the launcher will continue to run on
+        other platforms without it.
+        """
         s.gpio_controller = None
         if s.is_pi and RaspberryPiGPIOController:
             s.gpio_controller = RaspberryPiGPIOController(
                 s.gpio_controlls_data,
-                s.controlls_data['keyboard']
+                s.controlls_data['keyboard'],
             )
             print(f"System: {s.system}, Is Pi: {s.is_pi}")
 
-    #METHOD FOR POLLING GPIO CONTROLLER
     def poll_gpio(s):
+        """Poll the GPIO controller for input events when present."""
         if s.gpio_controller:
             s.gpio_controller.poll()
 
-    #METHOD FOR CHECKING OPERATING SYSTEM
     def checking_operating_system(s):
+        """Detect the operating system and whether this is a Raspberry Pi.
+
+        Returns a human-readable OS name. Sets `s.is_pi` flag when a
+        Raspberry Pi device tree model file is found.
+        """
         s.os_type = platform.system()
         try:
             with open('/proc/device-tree/model', 'r') as f:
@@ -133,9 +150,13 @@ class Launcher:
             s.is_pi = False
 
         return 'Raspberry Pi Os' if s.is_pi else s.os_type
-    
-    #METHOD FOR CHECKING INTERNET CONNECTION
-    def checking_internet_connection(s, timeout = 2):
+
+    def checking_internet_connection(s, timeout=2):
+        """Quick check for outgoing internet connectivity.
+
+        Attempts to open a socket to a public DNS server. This provides
+        a simple online/offline boolean used by other components.
+        """
         try:
             socket.setdefaulttimeout(timeout)
             socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("8.8.8.8", 53))
@@ -143,8 +164,8 @@ class Launcher:
         except OSError:
             return False
 
-    #METHOD FOR LOADING IN LAUNCHER DATA
     def loading_in_launcher_data(s):
+        """Load persistent configuration and launcher data from disk."""
         s.window_data = load_data(WINDOW_DATA_PATH, DEFUALT_WINDOW_DATA)
         s.audio_data = load_data(AUDIO_DATA_PATH, DEFAULT_AUDIO_DATA)
         s.theme_data = load_data(THEMES_DATA_PATH, DEFAULT_THEME_DATA)
@@ -153,42 +174,39 @@ class Launcher:
         s.game_library_data = load_data(GAME_LIBRARY_DATA_PATH, DEFAULT_GAME_LIBRARY_DATA)
         s.gpio_controlls_data = load_data(GPIO_CONTROLLS_DATA_PATH, DEFAULT_GPIO_CONTROLLS_DATA)
 
-    #METHOD FOR CREATING STATE AND OS ELEMENTS (LIBRARY, STORE, SETTINGS, ...)
     def creating_states(s):
+        """Instantiate application states and set the initial state."""
         s.state_manager.add_state('Library', Library(s))
         s.state_manager.add_state('Store', Store(s))
         s.state_manager.add_state('Options', Options(s))
         s.state_manager.add_state('Game preview', GamePreview(s))
-
-        #SETTING CURRENT STATE
         s.state_manager.set_state('Library')
 
-    #METHOD FOR SCALING MOUSE POSITTION
     def get_scaled_mouse_pos(s):
-        mouse_x, mouse_y = pygame.mouse.get_pos()
+        """Return mouse position scaled from display space to virtual window.
 
+        The launcher renders to a fixed virtual resolution (`s.window`) and
+        scales to the actual display surface. This helper converts mouse
+        coordinates from the real display to the virtual coordinate space.
+        """
+        mouse_x, mouse_y = pygame.mouse.get_pos()
         scaled_x = mouse_x * (s.screen.get_width() / s.display.get_width())
         scaled_y = mouse_y * (s.screen.get_height() / s.display.get_height())
-
         return int(scaled_x), int(scaled_y)
-    
-    #METHOD FOR SETTING UP MANAGERS
+
     def setting_up_managers(s):
+        """Create top-level managers used across the application."""
         s.state_manager = StateManager(s)
         s.audio_manager = AudioManager(s)
-    
-    #METHOD FOR SETTING UP THE DISPLAY
+
     def setting_up_display(s):
+        """Configure initial display flags and remember last window size."""
         s.fullscreen = s.window_data['fullscreen']
         s.last_window_size = (s.window_data['width'], s.window_data['height'])
+        s.flags = pygame.FULLSCREEN if s.fullscreen else pygame.RESIZABLE
 
-        if s.fullscreen:
-            s.flags = pygame.FULLSCREEN
-        else:
-            s.flags = pygame.RESIZABLE
-
-    #METHOD FOR SAVING THE LAUNCHER SETTINGS
     def save(s):
+        """Persist launcher state and configuration to disk."""
         save_data(s.window_data, WINDOW_DATA_PATH)
         save_data(s.audio_data, AUDIO_DATA_PATH)
         save_data(s.theme_data, THEMES_DATA_PATH)
@@ -197,52 +215,44 @@ class Launcher:
         save_data(s.game_library_data, GAME_LIBRARY_DATA_PATH)
         save_data(s.gpio_controlls_data, GPIO_CONTROLLS_DATA_PATH)
 
-    #METHOD FOR HANDLING EVENTS
     def handling_events(s):
+        """Process Pygame events and forward them to the active state.
 
-        #POLLING GPIO CONTROLLER
+        This method also polls optional GPIO input, blocks unwanted mouse
+        events (the launcher uses controller/keyboard navigation), and
+        handles window lifecycle events such as resize and quit.
+        """
+        # poll GPIO inputs first so states can react during the same frame
         s.poll_gpio()
 
-        #TELLING PYGAME TO IGNORE MOUSE EVENTS
+        # ignore raw mouse motion and clicks; launcher navigation is keyboard/controller-driven
         pygame.event.set_blocked([pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP])
 
         events = pygame.event.get()
         for event in events:
-
-            #CLOSING THE LAUNCHER IF WINDOW IS CLOSED
             if event.type == pygame.QUIT:
                 s.save()
                 pygame.quit()
                 exit()
 
-            #HANDLING WINDOW RESIZE
             if event.type == pygame.VIDEORESIZE and not s.fullscreen:
-
-                #SAVING THE LAST NOT FULLSCREENED WINDOW SIZE
+                # store new non-fullscreen size and recreate display surface
                 s.window_data['width'] = event.w
                 s.window_data['height'] = event.h
-
-                #SETTING FULLSCREEN
                 s.display = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
                 s.screen = pygame.Surface((WINDOW_WIDTH, WINDOW_HEIGHT))
-
-                #SAVING CHANGES
                 save_data(s.window_data, WINDOW_DATA_PATH)
 
-            #USER BUTTON INPUT
             if event.type == pygame.KEYDOWN:
-
-                #CLOSING LAUNCHER IF 'ESCAPE' BUTTON PRESSED
                 if event.key == pygame.K_ESCAPE:
                     s.save()
                     pygame.quit()
                     exit()
 
-                #TOGGLING FULLSCREEN MODE
                 if event.key == pygame.K_9:
+                    # toggle fullscreen and persist choice
                     s.fullscreen = not s.fullscreen
                     s.window_data['fullscreen'] = s.fullscreen
-
                     if s.fullscreen:
                         s.last_window_size = (s.display.get_width(), s.display.get_height())
                         s.flags = pygame.FULLSCREEN
@@ -251,84 +261,56 @@ class Launcher:
                         s.flags = pygame.RESIZABLE
                         s.display = pygame.display.set_mode(s.last_window_size, s.flags)
                         s.window_data['width'], s.window_data['height'] = s.last_window_size
-
                     save_data(s.window_data, WINDOW_DATA_PATH)
 
-        #PASSING EVENTS TO THE CURRENT STATE
+        # forward events to the current application state for domain handling
         s.state_manager.handling_events(events)
 
-    #METHOD FOR UPDATING THE LAUNCHER
     def update(s):
-        
-        #CHECKING IF THE GAME IS STILL RUNNING
+        """Update launcher state, timing and monitor any launched game process."""
+        # if a child game process has ended, restore launcher audio and flags
         if s.game_running and s.game_process:
             if s.game_process.poll() is not None:
                 s.game_running = False
                 s.game_process = None
-                
-                #RESUMING LAUNCHER MUSIC
                 s.audio_manager.unpause_music()
 
+        # reduce launcher FPS while a game is active to save CPU if configured
         if s.game_running:
             s.delta_time = s.clock.tick(s.performance_settings_data['decrease_launcher_fps_when_game_active']) / 1000
         else:
             s.delta_time = s.clock.tick(s.fps) / 1000
 
-
         print(f"FPS: {s.clock.get_fps():.2f}", end='\r')
-
-        #UPDATING CURRENT STATE
         s.state_manager.update(s.delta_time)
 
-    #METHOD FOR DRAWING THE LAUNCHER
     def draw(s):
-
-        #FILLING THE WINDOW BLACK
-        s.window.fill((255,0,0))
-
-        #DRAWING THE CURRENT STATE
+        """Render the active state to the virtual window and scale to the display."""
+        # background fill (currently red for debugging; change as appropriate)
+        s.window.fill((255, 0, 0))
         s.state_manager.draw(s.window)
 
-        #TRANSFORMING THE WINDOW TO PROPER DISPLAY | S.WINDOW ---> S.DISPLAY
         scaled_window = pygame.transform.scale(s.window, (s.display.get_width(), s.display.get_height()))
-
-        #BLITTING THE SCALED WINDOW TO THE DISPLAY
-        s.display.blit(scaled_window, (0,0))
-
-        #UPDATING THE DISPLAY
+        s.display.blit(scaled_window, (0, 0))
         pygame.display.update()
 
-    #METHOD FOR RUNNING THE LAUNCHER
     def run(s):
-
-        #MAIN APPLICATION LOOP
+        """Enter the main application loop (event -> update -> draw)."""
         while True:
-
-            #HANDILING EVENTS
             s.handling_events()
-
-            #UPDATING THE LAUNCHER
             s.update()
-
-            #DRAWING THE LAUNCHER
             s.draw()
 
-#RUNNING THE LAUNCHER ONLY FROM THE MAIN FILE
-if __name__ == '__main__':
-    
-    try:
 
-        #RUNNING THE LAUNCHER
+if __name__ == '__main__':
+    try:
         launcher = Launcher()
         print(launcher)
         launcher.run()
-
-    #CATCHING MANUAL TERMINATION (CTRL+C) FOR A CLEAN EXIT
     except KeyboardInterrupt:
         print("\nLauncher terminated manually.")
-
-    #CATCHING ANY ERRORS SO THE USER CAN TROUBLESHOOT
-    except Exception as e:
+    except Exception:
         import traceback
+
         traceback.print_exc()
         input('Press [ENTER] to exit...')

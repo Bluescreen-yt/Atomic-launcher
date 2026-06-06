@@ -1,22 +1,26 @@
-# IMPORTING LIBRARIES
+"""Control remapping tab.
+
+This tab allows the user to choose between preset control layouts, or
+manually rebind individual keyboard buttons. It persists the chosen
+bindings to the controls data file.
+"""
+
 import pygame
 
-# IMPORTING FILES
 from settings import get_contrast_text_color
 from Tools.data_loading_tools import save_data
-from settings import CONTROLLS_DATA_PATH
-from settings import THEME_LIBRARY
-from settings import WINDOW_WIDTH
+from settings import CONTROLLS_DATA_PATH, THEME_LIBRARY, WINDOW_WIDTH
 from UI.options_ui.generic_options_tab import GenericOptionsTab
 
 
 class ControlsOptionsTab(GenericOptionsTab):
+    """Options tab for control presets and key rebinding."""
     def __init__(s, launcher):
         super().__init__(launcher)
         
         s.current_theme = THEME_LIBRARY[s.launcher.theme_data['current_theme']]
         
-        # --- SPACIOUS CONTAINER LAYOUT ---
+        # --- Layout for the preset selector and rebinding panels ---
         s.initial_pos = (WINDOW_WIDTH * 0.25, 430) 
         s.button_size = (460, 130)  # Expanded size to gracefully house both text and images
         s.spacing = 15
@@ -75,7 +79,7 @@ class ControlsOptionsTab(GenericOptionsTab):
         s.waiting_for_key = False
 
     def evaluate_current_preset(s):
-        """Checks if the currently loaded keys match WASD or Arrows perfectly."""
+        """Detect whether the current bindings match a known preset."""
         ctrl = s.launcher.controlls_data['keyboard']
         s.preset_idx = 2  # Default to Custom
         for idx, name in enumerate(['Arrows', 'WASD']):
@@ -87,7 +91,7 @@ class ControlsOptionsTab(GenericOptionsTab):
         s.preset_focus_idx = s.preset_idx
 
     def apply_preset(s):
-        """Applies the selected preset to the launcher data and saves it."""
+        """Apply the selected control preset and persist it to disk."""
         preset_name = s.preset_names[s.preset_idx]
         if preset_name == 'Custom':
             return

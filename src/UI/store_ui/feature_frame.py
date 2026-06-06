@@ -1,4 +1,11 @@
-# IMPORTING LIBRARIES
+"""Featured game carousel used by the store's home section.
+
+This component loads featured game metadata from
+`src/Manifests/featured_games.json`, caches screenshots and icons, and
+renders a carousel frame in the store screen. It also handles keyboard
+navigation for the featured game preview section.
+"""
+
 import pygame
 from os.path import join, isdir
 from os import listdir
@@ -10,6 +17,8 @@ from Tools.asset_importing_tool import import_image
 
 
 class FeatureFrame:
+    """Carousel-style featured game panel for the store."""
+
     def __init__(s, launcher, manifest):
         s.launcher = launcher
         s.manifest = manifest
@@ -35,6 +44,7 @@ class FeatureFrame:
         s.load_all_screenshots()
 
     def _load_featured_games(s):
+        """Load featured games configuration and preserve custom reasons."""
         featured_data = load_data(s.feature_data_path, {})
         games_dict = featured_data.get('featured_games', {})
         s.feature_reasons = {}
@@ -116,6 +126,7 @@ class FeatureFrame:
             s.current_screenshot_index[game_id] = (s.current_screenshot_index[game_id] + 1) % len(s.screenshots[game_id])
 
     def handling_events(s, events):
+        """Handle user navigation events for the featured frame."""
         # 1. Handle Mouse (GPIO won't trigger this, which is correct)
         for event in events:
             if s.feature_frame.handle_mouse_event(event):

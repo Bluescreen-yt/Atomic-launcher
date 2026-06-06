@@ -1,12 +1,16 @@
-#IMPORTING LIBRARIES
+"""FPS preview ball used in the video settings tab.
+
+This simple animated ball provides a visual way to demonstrate the current
+frame rate setting inside the performance options tab.
+"""
+
 import pygame
 
-#IMPORT FILES
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY
 
 
-#A SIMPLE BALL THAT MOVES, THE PLAYER CAN SEE THE DIFFERENCE IN FPS
 class Ball:
+    """Animated ball used to preview visual framerate."""
 
     def __init__(s, initial_pos, color):
         s.radius = 80

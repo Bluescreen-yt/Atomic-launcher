@@ -1,3 +1,9 @@
+"""Progress bar utility for download and installation status.
+
+This module provides a simple reusable `Bar` widget that can render a
+filled progress bar and optionally overlay percentage text.
+"""
+
 import pygame
 
 class Bar:
@@ -8,15 +14,15 @@ class Bar:
         self.border_color = border_color
         self.border_width = border_width
         
-        # Procent od 0 do 100
+        # Progress percentage from 0 to 100
         self.progress = 0
 
     def set_progress(self, value):
-        """Ustawia postęp, dbając o zakres 0-100."""
+        """Set progress while clamping the value between 0 and 100."""
         self.progress = max(0, min(100, value))
 
     def draw(self, surface):
-        # 1. Rysujemy tło belki
+        """Draw the progress bar background, fill, and border."""
         pygame.draw.rect(surface, self.bg_color, self.rect)
 
         # 2. Obliczamy szerokość wypełnienia
@@ -30,7 +36,7 @@ class Bar:
             pygame.draw.rect(surface, self.border_color, self.rect, self.border_width)
 
     def draw_with_text(self, surface, font, text_color=(255, 255, 255)):
-        """Rysuje belkę oraz procentowy tekst na środku."""
+        """Draw the progress bar and render the percentage text centered."""
         self.draw(surface)
         
         percentage_text = f"{int(self.progress)}%"

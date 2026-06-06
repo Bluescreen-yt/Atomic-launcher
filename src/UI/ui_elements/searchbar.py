@@ -1,10 +1,13 @@
-#IMPORTING LIBRARIES
+"""Search bar UI element with built-in on-screen keyboard support.
+
+This widget renders a searchable text field and can open an internal
+keyboard overlay for text input. It is used by both the library and
+store states to feed search query text back to the parent state.
+"""
+
 import pygame
 
-#IMPORTING FILES
 from settings import WINDOW_WIDTH, THEME_LIBRARY, WINDOW_HEIGHT, get_contrast_text_color
-
-#IMPORTING UI ELEMENTS
 from UI.ui_elements.keyboard import Keyboard
 
 class SearchBar:
@@ -26,9 +29,14 @@ class SearchBar:
         self.font = pygame.font.SysFont(None, int(WINDOW_WIDTH * 0.035))
 
     def handle_events(self, events):
+        """Process keyboard events when the search field is active.
+
+        Returns True when typing is finished and the caller should stop
+        further event routing for the current frame.
+        """
         if self.active:
             self.keyboard.handling_events(events)
-            
+
             # Sync text and trigger the search filter update
             if self.text != self.keyboard.text:
                 self.text = self.keyboard.text
@@ -37,7 +45,7 @@ class SearchBar:
             if self.keyboard.finished:
                 self.active = False
                 self.keyboard.finished = False
-                return True # Signal that we are done typing
+                return True
         return False
 
     def open_keyboard(self):

@@ -1,11 +1,17 @@
-#IMPORTING LIBRARIES
+"""Sidebar navigation panel for the launcher.
+
+The sidebar presents the main app states (Library, Store, Options, Exit)
+and handles keyboard/controller navigation between them. It expands when
+focused and collapses when the content area is active.
+"""
+
 import pygame
 from sys import exit
 
-#IMPORTING FILES
 from settings import WINDOW_WIDTH, WINDOW_HEIGHT, THEME_LIBRARY, get_contrast_text_color
 
 class Sidebar:
+    """Sidebar widget that manages menu selection and state switching."""
     def __init__(self, launcher):
         self.launcher = launcher
         self.index = 0
@@ -46,6 +52,7 @@ class Sidebar:
     # ===============================
 
     def handle_input(self, events):
+        """Process sidebar navigation events and update selected state."""
         if not self.options:
             return
 
@@ -97,6 +104,7 @@ class Sidebar:
     # ===============================
 
     def update(self, delta):
+        """Animate sidebar width based on focus state."""
         ui_focus = self.launcher.state_manager.ui_focus
         target = self.expanded_w if ui_focus == "sidebar" else self.base_w
         self.current_w += (target - self.current_w) * 12 * delta
@@ -115,10 +123,10 @@ class Sidebar:
         if not self.options:
             return
 
-        # ---- USTAWIENIA ODSTĘPÓW ----
-        item_height = 60  # Stała wysokość jednego elementu
-        start_y = 100     # Margines od górnej krawędzi paska
-        spacing = 40      # Dodatkowy odstęp między ikonami
+        # ---- SPACING SETTINGS ----
+        item_height = 60  # Fixed height for each menu item
+        start_y = 100     # Top margin inside the sidebar
+        spacing = 40      # Vertical spacing between items
 
         width_diff = self.expanded_w - self.base_w
         progress = (self.current_w - self.base_w) / max(1, width_diff)

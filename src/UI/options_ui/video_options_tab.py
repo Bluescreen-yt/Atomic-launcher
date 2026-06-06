@@ -1,16 +1,35 @@
-#IMPORTING LIBRARIES
+"""Video options tab: resolution and framerate controls.
+
+This tab allows the user to choose fullscreen or window resolutions and
+set the preferred FPS cap. It also renders a preview ball to show the
+current framerate behaviour visually.
+
+Developer notes
++- Resolution labels are stored in `s.resolution_list`; updating this list
++  changes the available resolution buttons.
++- FPS options are in `s.FPS_options`; the tab uses `launcher.window_data`
++  to determine the current selection.
++- The active column is tracked by `s.active_column` so keyboard navigation
++  can switch cleanly between resolution and FPS sections.
+"""
+
 import pygame
 
-#IMPORTING FILES
 from settings import get_contrast_text_color
 from UI.options_ui.FPS_preview_ball import Ball
 from Tools.data_loading_tools import save_data
 from settings import THEME_LIBRARY
 from settings import WINDOW_HEIGHT, WINDOW_WIDTH, WINDOW_DATA_PATH
-from settings import THEME_LIBRARY, WINDOW_WIDTH
 from UI.options_ui.generic_options_tab import GenericOptionsTab
 
 class VideoOptionsTab(GenericOptionsTab):
+    """Options tab that exposes resolution and framerate controls.
+
+    This tab supports keyboard navigation across a resolution grid and
+    an FPS list, and it writes the selected values back to launcher
+    settings so the change is immediately visible.
+    """
+
     def __init__(s, launcher):
         super().__init__(launcher)
 
@@ -246,14 +265,17 @@ class VideoOptionsTab(GenericOptionsTab):
             window.blit(text_surface, text_rect)
 
     def get_fps_values(s):
+        """Return the full list of available FPS options."""
         return s.FPS_options
     
     def is_current_fps(s, fps):
+        """Return whether the given FPS option matches the current launcher FPS."""
         if fps == 'Uncapped':
             return s.launcher.window_data['fps'] == 0
         return s.launcher.window_data['fps'] == fps
 
     def is_current_resolution(s, res_label):
+        """Return whether `res_label` represents the current active resolution."""
         if res_label == 'Fullscreen':
             return s.launcher.window_data['fullscreen']
 
@@ -268,8 +290,8 @@ class VideoOptionsTab(GenericOptionsTab):
                 )
         return False
 
-    #METHOD FOR CHANGING THE RESOLUTION
     def change_resolution(s, width, height):
+        """Apply a new window resolution and persist the selected size."""
 
         s.launcher.window_data['width'] = width
         s.launcher.window_data['height'] = height
@@ -278,8 +300,8 @@ class VideoOptionsTab(GenericOptionsTab):
         #SAVING CHANGES
         save_data(s.launcher.window_data, WINDOW_DATA_PATH)
 
-    #METHOD FOR GOING FULLSCREEN
     def go_fullscreen(s):
+        """Toggle fullscreen mode and persist the new window state."""
 
         s.launcher.fullscreen = not s.launcher.fullscreen
         s.launcher.window_data['fullscreen'] = s.launcher.fullscreen
@@ -296,14 +318,15 @@ class VideoOptionsTab(GenericOptionsTab):
         #SAVING CHANGES
         save_data(s.launcher.window_data, WINDOW_DATA_PATH)
 
-    #METHOD FOR CHANGING FPS
     def update_fps(s, new_fps):
+        """Set the launcher FPS cap and persist the selection."""
         s.launcher.fps = None if new_fps == 0 else new_fps
         s.launcher.window_data['fps'] = new_fps
 
         save_data(s.launcher.window_data, WINDOW_DATA_PATH)
 
     def draw_current_settings(s, window):
+        """Render a status line with the currently applied resolution/FPS."""
         text = f"Resolution: {s.launcher.window_data['width']}x{s.launcher.window_data['height']} | FPS: "
         text += "Uncapped" if s.launcher.window_data['fps'] == 0 else str(s.launcher.window_data['fps'])
 
