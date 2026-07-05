@@ -134,47 +134,29 @@ class Store(BaseState):
             return
 
         x_start = s.launcher.sidebar.base_w + 40
-        y_current = 5
+        y_current = 8
 
         # Current downloading
         if s.launcher.installer.is_downloading:
             current_id = s.launcher.installer.current_game_id
-            icon = s._get_cached_icon(current_id, 45)
+            icon = s._get_cached_icon(current_id, 34)
             if icon:
                 window.blit(icon, (x_start, y_current))
 
-            # Title
-            title_surf = s.text_font.render(s.manifest[current_id]['name'], True, theme['colour_3'])
-            window.blit(title_surf, (x_start + 70, y_current + 10))
-
-            # Progress bar
-            bar_x = x_start + 70
-            bar_y = y_current + 45
-            bar = Bar(bar_x, bar_y, 200, 20)
+            bar_x = x_start + 46
+            bar_y = y_current + 8
+            bar = Bar(bar_x, bar_y, 180, 16)
             bar.set_progress(s.launcher.installer.download_progress)
             bar.draw(window)
 
-            # Cancel button
-            cancel_x = bar_x + 220
-            cancel_y = bar_y - 5
-            s.cancel_rect = pygame.Rect(cancel_x, cancel_y, 60, 30)
-            pygame.draw.rect(window, (200, 50, 50), s.cancel_rect, border_radius=5)
+            cancel_x = bar_x + 190
+            cancel_y = bar_y - 2
+            s.cancel_rect = pygame.Rect(cancel_x, cancel_y, 48, 20)
+            pygame.draw.rect(window, (200, 50, 50), s.cancel_rect, border_radius=4)
             if s.launcher.state_manager.ui_focus == "download":
-                pygame.draw.rect(window, theme['colour_2'], s.cancel_rect, 3, border_radius=7)
-            cancel_surf = s.small_font.render("Cancel", True, (255, 255, 255))
+                pygame.draw.rect(window, theme['colour_2'], s.cancel_rect, 2, border_radius=6)
+            cancel_surf = s.small_font.render("X", True, (255, 255, 255))
             window.blit(cancel_surf, cancel_surf.get_rect(center=s.cancel_rect.center))
-
-        # Next in queue
-        if s.launcher.installer.download_queue:
-            next_x = x_start + 500 if s.launcher.installer.is_downloading else x_start
-            next_id = s.launcher.installer.download_queue[0][0]
-            icon = s._get_cached_icon(next_id, 30)
-            if icon:
-                window.blit(icon, (next_x, y_current))
-
-            # Title
-            next_surf = s.info_font.render(f"Next: {s.manifest[next_id]['name']}", True, theme['colour_3'])
-            window.blit(next_surf, (next_x + 40, y_current + 5))
 
     def _get_cached_icon(s, game_id, size):
         cache_key = (game_id, size)

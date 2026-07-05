@@ -52,7 +52,7 @@ class GamePreview(BaseState):
         # ------------------------------------
 
         s.status = GameStatus.NOT_INSTALLED
-        s.progress_bar = Bar(0, 0, 300, 20) 
+        s.progress_bar = Bar(0, 0, 300, 20)
         
         s.current_img_index = 0
         s.is_fullscreen = False
@@ -481,7 +481,7 @@ class GamePreview(BaseState):
         # 5. PROGRESS BAR
         if is_busy:
             prog = s.launcher.installer.download_progress
-            s.progress_bar.rect = pygame.Rect(menu_x, panel_y + screenshot_h + 60, btn_w, 20)
+            s.progress_bar.rect = pygame.Rect(menu_x, panel_y - 25, btn_w, 20)
             s.progress_bar.set_progress(prog)
             s.progress_bar.draw(window)
 
